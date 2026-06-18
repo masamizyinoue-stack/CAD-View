@@ -8,231 +8,274 @@
 <meta name="theme-color" content="#0b0f14">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <link rel="apple-touch-icon" href="apple-touch-icon.png">
-<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js">
+</script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
 <style>
 *{box-sizing:border-box;margin:0;padding:0}
 :root{
-  --bg:#1a1f26;--sb-bg:#0f1318;--topbar-bg:#0f1318;
-  --canvas-bg:#000;--accent:#2ecc71;--accent-2:#f39c12;
+  --bg:#0d1117;--sb-bg:#0f1318;--topbar-bg:#0f1318;
+  --accent:#2ecc71;--accent-2:#f39c12;
   --text:#e0e0e0;--text-dim:#888;--border:#2a3040;
-  --sb-w:118px;
 }
-body{display:flex;flex-direction:row;width:100vw;height:100vh;overflow:hidden;
-  background:var(--bg);color:var(--text);font-family:sans-serif;font-size:13px}
+body{display:flex;flex-direction:column;width:100vw;height:100vh;overflow:hidden;
+  background:var(--bg);color:var(--text);
+  font-family:-apple-system,BlinkMacSystemFont,'Helvetica Neue',sans-serif;font-size:14px}
+.topbar{height:62px;min-height:62px;background:var(--topbar-bg);border-bottom:1px solid var(--border);
+  display:flex;align-items:center;gap:6px;padding:0 10px;position:relative;z-index:10;flex-shrink:0}
+.logo-block{display:flex;align-items:baseline;gap:4px;flex-shrink:0;padding:0 4px}
+.logo-text{font-size:17px;font-weight:700;color:var(--accent);line-height:1.2;white-space:nowrap}
+.logo-sub{font-size:10px;color:var(--text-dim);white-space:nowrap}
+.tb-btn{width:44px;height:52px;border-radius:10px;flex-shrink:0;border:1px solid var(--border);
+  background:transparent;color:var(--text);font-size:20px;display:flex;flex-direction:column;align-items:center;
+  justify-content:center;gap:1px;cursor:pointer;-webkit-tap-highlight-color:transparent}
+.tb-btn:active{background:rgba(255,255,255,.1)}
+#settingsBtn{border-color:var(--accent);color:var(--accent);font-size:22px}
+.tb-sep{width:1px;height:26px;background:var(--border);margin:0 3px;flex-shrink:0}
+.tb-tool-btn{width:44px;height:52px;border-radius:9px;flex-shrink:0;border:1.5px solid transparent;background:transparent;color:var(--text);font-size:18px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:1px;cursor:pointer;-webkit-tap-highlight-color:transparent}
+.tb-tool-label{font-size:9px;line-height:1;opacity:0.75;letter-spacing:0.02em;pointer-events:none}
+.tb-tool-btn:active{background:rgba(255,255,255,.1)}
+.tb-tool-btn.active{background:rgba(0,212,255,0.22);border-color:#00d4ff;color:#00d4ff}
 
-/* ── 常時表示サイドバー ── */
-#sidebar-fixed{
-  width:var(--sb-w);min-width:var(--sb-w);
-  background:var(--sb-bg);border-right:1px solid var(--border);
-  display:flex;flex-direction:column;padding:8px 7px;gap:10px;
-}
-.lt-wrap{padding-bottom:8px;border-bottom:1px solid var(--border)}
-.lt-name{font-size:14px;font-weight:bold;color:var(--accent);line-height:1.2}
-.lt-sub{font-size:10px;color:var(--text-dim);line-height:1.4;margin-top:2px}
-#openFileBtnMain{
-  width:100%;padding:10px 5px;font-size:13px;font-weight:bold;
-  background:linear-gradient(180deg,#1e2a18,#14200f);
-  border:1.5px solid var(--accent);border-radius:5px;
-  color:var(--accent);cursor:pointer;text-align:center;line-height:1.5;white-space:normal;
-}
-#openFileBtnMain:hover{background:#243520}
-.file-sub{font-size:10px;color:var(--text-dim);text-align:center;margin-top:-4px}
-.bw-label{font-size:11px;color:var(--text-dim);margin-bottom:5px}
-.bw-btns{display:flex;gap:4px}
-.bw-btn{
-  flex:1;padding:5px 3px;font-size:12px;border-radius:3px;
-  border:1.5px solid var(--border);cursor:pointer;
-  background:var(--sb-bg);color:var(--text);
-}
-.bw-btn.active{border-color:var(--accent);color:var(--accent);background:#172217}
-
-/* ── スライド式設定パネル ── */
-#sidebar{
-  width:220px;min-width:220px;background:var(--sb-bg);
-  border-right:1px solid var(--border);
-  display:flex;flex-direction:column;gap:8px;padding:8px;
-  position:fixed;left:var(--sb-w);top:0;bottom:0;z-index:200;
-  transform:translateX(-100%);transition:transform .2s;
-}
-body.sidebar-open #sidebar{transform:translateX(0)}
-.tool-grid{display:grid;grid-template-columns:1fr 1fr;gap:4px}
-
-/* ── メイン列 ── */
-.main{display:flex;flex-direction:column;flex:1;min-width:0;height:100vh}
-.topbar{
-  height:52px;min-height:52px;background:var(--topbar-bg);
-  border-bottom:1px solid var(--border);
-  display:flex;align-items:center;gap:4px;padding:0 8px;
-  flex-wrap:nowrap;overflow-x:auto;
-}
-.logo-block{display:flex;flex-direction:column;padding-right:4px;flex-shrink:0}
-.lb-name{font-size:15px;font-weight:bold;color:var(--accent);line-height:1.2}
-.lb-sub{font-size:10px;color:var(--text-dim)}
-.stage{flex:1;position:relative;overflow:hidden;background:#000}
+.color-dot{width:22px;height:22px;border-radius:50%;display:block;border:2.5px solid rgba(255,255,255,.45)}
+.stage{flex:1;position:relative;overflow:hidden;background:#000;min-height:0}
 #cv,#ov{position:absolute;top:0;left:0;width:100%;height:100%}
-#ov{pointer-events:all;cursor:crosshair}
-
-/* ── ビューメモ ── */
-.viewmemo{position:absolute;top:8px;right:8px;z-index:100;
-  display:grid;grid-template-columns:auto auto;gap:3px}
-.viewmemo button{font-size:11px;padding:4px 8px;cursor:pointer;
-  border:1px solid var(--border);border-radius:3px;
-  background:rgba(15,19,24,.88);color:var(--text)}
-.viewmemo .mem-btn{background:rgba(243,156,18,.88);color:#000;border-color:var(--accent-2)}
-.viewmemo .show-btn{background:rgba(46,204,113,.88);color:#000;border-color:var(--accent)}
-.viewmemo .full-row{grid-column:1/-1;text-align:center}
-
-/* ── 汎用ボタン ── */
-button{cursor:pointer;border:1px solid var(--border);border-radius:3px;
-  background:var(--sb-bg);color:var(--text);padding:4px 8px;font-size:12px;white-space:nowrap}
-button:hover{background:#1e2430}
-button.active{background:var(--accent);color:#000;border-color:var(--accent)}
-.topbar button{height:34px}
-.sep{width:1px;height:28px;background:var(--border);margin:0 2px;flex-shrink:0}
-.spacer{flex:1;min-width:4px}
-.sidebar-section{border-top:1px solid var(--border);padding-top:8px;margin-top:4px}
-.sidebar-label{font-size:11px;color:var(--text-dim);margin-bottom:4px}
-#sidebar input[type=number]{width:80px;background:#1a1f26;
-  border:1px solid var(--border);color:var(--text);padding:3px 6px;border-radius:3px}
-#sidebar .row{display:flex;align-items:center;gap:6px}
-.info-box{font-size:11px;color:var(--text-dim);background:#0a0c10;
-  border:1px solid var(--border);border-radius:3px;padding:6px;min-height:40px;line-height:1.6}
-#ver-label{font-size:11px;color:var(--text-dim);text-align:center;margin-top:auto;padding-top:8px}
-
-/* ── レイヤモーダル ── */
+#ov{pointer-events:all;cursor:crosshair;touch-action:none}
+#noDrawingMsg{position:absolute;inset:0;display:flex;flex-direction:column;
+  align-items:center;justify-content:center;pointer-events:none;gap:14px}
+#noDrawingMsg svg{opacity:.22}
+.nd-text{color:#2e3f56;font-family:monospace;font-size:13px;letter-spacing:3px;font-weight:bold}
+.btbar{display:none;position:absolute;bottom:22px;left:50%;transform:translateX(-50%);
+  display:flex;align-items:stretch;gap:4px;
+  background:rgba(10,14,20,.92);border:1px solid rgba(42,48,64,.9);border-radius:20px;
+  padding:8px 10px;backdrop-filter:blur(16px);-webkit-backdrop-filter:blur(16px);
+  box-shadow:0 4px 24px rgba(0,0,0,.55);z-index:100}
+.btbar-group{display:flex;gap:2px}
+.btbar-sep{width:1px;background:var(--border);margin:4px 6px;border-radius:1px}
+.bt-btn{width:62px;height:52px;border-radius:13px;border:1.5px solid transparent;
+  background:transparent;color:var(--text);cursor:pointer;
+  display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;
+  -webkit-tap-highlight-color:transparent;flex-shrink:0}
+.bt-btn:active{background:rgba(255,255,255,.12)}
+.bt-btn.active{background:rgba(46,204,113,.15);border-color:var(--accent)}
+.bt-icon{font-size:20px;line-height:1}
+.bt-label{font-size:10px;color:var(--text-dim);line-height:1}
+.bt-btn.active .bt-label,.bt-btn.active .bt-icon{color:var(--accent)}
+.viewmemo{position:absolute;top:10px;right:10px;z-index:100;
+  display:grid;grid-template-columns:auto auto;gap:4px}
+.viewmemo button{min-height:48px;min-width:52px;padding:4px 10px;font-size:12px;border:1px solid var(--border);
+  border-radius:8px;background:rgba(10,14,20,.88);color:var(--text);cursor:pointer;
+  backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);
+  -webkit-tap-highlight-color:transparent;white-space:nowrap;
+  display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;
+  transition:all .15s ease}
+.viewmemo .mem-btn{background:transparent;border:1.5px solid rgba(140,160,180,0.3);color:rgba(170,190,210,0.5);opacity:1;font-weight:normal}
+.viewmemo .show-btn{background:transparent;border:1.5px solid rgba(140,160,180,0.3);color:rgba(170,190,210,0.5);opacity:1;font-weight:normal}
+.viewmemo .mem-btn.vm-saved{background:rgba(0,212,255,0.12);border-color:#00d4ff;color:#00d4ff;font-weight:600;box-shadow:0 0 8px rgba(0,212,255,0.25)}
+.viewmemo .show-btn.vm-saved{background:rgba(0,212,255,0.12);border-color:#00d4ff;color:#00d4ff;font-weight:600;box-shadow:0 0 8px rgba(0,212,255,0.25)}
+.viewmemo .full-row{grid-column:1/-1;text-align:center;opacity:0;pointer-events:none;position:absolute}
+#snap-hint{position:absolute;bottom:90px;left:50%;transform:translateX(-50%);
+  background:rgba(0,0,0,.82);color:var(--accent);font-size:12px;
+  padding:6px 14px;border-radius:8px;pointer-events:none;display:none}
+#settingsOverlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:299}
+body.settings-open #settingsOverlay{display:block}
+#settingsPanel{position:fixed;left:0;top:0;bottom:0;width:300px;max-width:80vw;
+  background:var(--sb-bg);border-right:1px solid var(--border);display:flex;flex-direction:column;
+  overflow-y:auto;z-index:300;transform:translateX(-110%);
+  transition:transform .26s cubic-bezier(.4,0,.2,1)}
+body.settings-open #settingsPanel{transform:translateX(0)}
+.sp-header{display:flex;align-items:center;justify-content:space-between;padding:14px 16px;
+  border-bottom:1px solid var(--border);position:sticky;top:0;background:var(--sb-bg);z-index:1;flex-shrink:0}
+.sp-title{font-size:17px;font-weight:600;color:var(--accent)}
+.sp-close{width:36px;height:36px;border-radius:18px;border:1px solid var(--border);
+  background:transparent;color:var(--text);font-size:15px;cursor:pointer;
+  display:flex;align-items:center;justify-content:center;-webkit-tap-highlight-color:transparent}
+#openFileBtnMain{display:flex;align-items:center;gap:12px;margin:14px 16px;padding:14px 16px;
+  background:rgba(46,204,113,.08);border:1.5px solid var(--accent);border-radius:12px;
+  color:var(--accent);font-size:15px;cursor:pointer;text-align:left;width:calc(100% - 32px);
+  -webkit-tap-highlight-color:transparent}
+#openFileBtnMain:active{background:rgba(46,204,113,.18)}
+.sp-file-icon{font-size:26px;flex-shrink:0}
+.sp-section{padding:12px 16px;border-top:1px solid var(--border)}
+.sp-label{font-size:11px;color:var(--text-dim);margin-bottom:8px;
+  text-transform:uppercase;letter-spacing:.5px;font-weight:500}
+.sp-row{display:flex;gap:8px;align-items:center}
+.sp-toggle-btn{flex:1;padding:10px;border-radius:9px;font-size:14px;border:1.5px solid var(--border);
+  background:transparent;color:var(--text);cursor:pointer;-webkit-tap-highlight-color:transparent}
+.sp-toggle-btn.active{border-color:var(--accent);color:var(--accent);background:rgba(46,204,113,.1)}
+.sp-input{width:100%;padding:10px 12px;border-radius:9px;font-size:16px;
+  background:#1a1f26;border:1px solid var(--border);color:var(--text)}
+.sp-page-btn{width:44px;height:44px;border-radius:9px;font-size:18px;
+  border:1px solid var(--border);background:transparent;color:var(--text);cursor:pointer}
+.sp-page-info{flex:1;text-align:center;color:var(--text-dim);font-size:15px}
+.sp-action-btn{width:100%;padding:12px;border-radius:9px;font-size:14px;
+  border:1px solid var(--border);background:transparent;color:var(--text);cursor:pointer;text-align:center;
+  -webkit-tap-highlight-color:transparent}
+.sp-action-btn:active{background:rgba(255,255,255,.07)}
+.sp-danger-btn{width:100%;padding:12px;border-radius:9px;font-size:14px;font-weight:600;
+  border:1.5px solid #c0392b;background:rgba(192,57,43,.1);color:#e74c3c;cursor:pointer;
+  -webkit-tap-highlight-color:transparent}
+.sp-danger-btn:active{background:rgba(192,57,43,.22)}
+#ver-label{font-size:11px;color:var(--text-dim);text-align:center;padding:16px;margin-top:auto}
+#colorOverlay{display:none;position:fixed;z-index:400;top:62px;right:10px;
+  background:var(--sb-bg);border:1px solid var(--border);border-radius:16px;
+  padding:16px;min-width:200px;box-shadow:0 8px 32px rgba(0,0,0,.65);flex-direction:column;gap:14px}
+#colorOverlay.open{display:flex}
+.co-label{font-size:11px;color:var(--text-dim);margin-bottom:8px;
+  text-transform:uppercase;letter-spacing:.5px;font-weight:500}
+.co-colors{display:flex;gap:8px}
+.color-btn{width:38px;height:38px;border-radius:50%;border:3px solid transparent;cursor:pointer;
+  -webkit-tap-highlight-color:transparent}
+.color-btn.active{border-color:#fff;box-shadow:0 0 0 2px var(--accent)}
+.co-lw{display:flex;gap:8px}
+.lw-btn{flex:1;height:44px;border-radius:9px;font-size:15px;font-weight:600;
+  border:1.5px solid var(--border);background:transparent;color:var(--text);cursor:pointer;
+  -webkit-tap-highlight-color:transparent}
+.lw-btn.active{border-color:var(--accent);color:var(--accent);background:rgba(46,204,113,.1)}
 #layerModal{display:none;position:fixed;inset:0;z-index:500;
   background:rgba(0,0,0,.7);align-items:center;justify-content:center}
 #layerModal.open{display:flex}
-.modal-box{background:var(--sb-bg);border:1px solid var(--border);border-radius:6px;
-  padding:16px;min-width:280px;max-width:400px;max-height:80vh;
-  display:flex;flex-direction:column;gap:8px}
-.modal-box h3{color:var(--accent);font-size:14px}
-#layerList{overflow-y:auto;flex:1;display:flex;flex-direction:column;gap:4px}
-.layer-row{display:flex;align-items:center;gap:8px;padding:3px 0}
-.layer-row input[type=checkbox]{accent-color:var(--accent)}
-.layer-color-box{width:14px;height:14px;border-radius:2px;border:1px solid #444;flex-shrink:0}
-.color-btn{width:24px;height:24px;border-radius:50%;border:2.5px solid transparent;
-  cursor:pointer;flex-shrink:0}
-.color-btn.active{border-color:#fff}
-.lw-btn{font-size:13px;padding:2px 7px}
-#snap-hint{position:absolute;bottom:8px;left:50%;transform:translateX(-50%);
-  background:rgba(0,0,0,.7);color:var(--accent);font-size:11px;
-  padding:2px 8px;border-radius:3px;pointer-events:none;display:none}
-#sidebarOpen{border-color:var(--accent);color:var(--accent)}
-
-/* ── NO DRAWING LOADED ── */
-#noDrawingMsg{position:absolute;inset:0;display:flex;flex-direction:column;
-  align-items:center;justify-content:center;pointer-events:none;gap:14px}
-#noDrawingMsg svg{opacity:.28}
-#noDrawingMsg .nd-text{color:#2e3f56;font-family:monospace;
-  font-size:13px;letter-spacing:3px;font-weight:bold}
+.modal-box{background:var(--sb-bg);border:1px solid var(--border);border-radius:16px;
+  padding:20px;min-width:300px;max-width:460px;max-height:80vh;display:flex;flex-direction:column;gap:10px}
+.modal-box h3{color:var(--accent);font-size:16px}
+#layerList{overflow-y:auto;flex:1;display:flex;flex-direction:column;gap:6px}
+.layer-row{display:flex;align-items:center;gap:10px;padding:5px 0}
+.layer-row input[type=checkbox]{accent-color:var(--accent);width:20px;height:20px}
+.layer-color-box{width:16px;height:16px;border-radius:3px;border:1px solid #555;flex-shrink:0}
+.modal-close-btn{padding:12px;border-radius:9px;font-size:15px;
+  border:1px solid var(--border);background:transparent;color:var(--text);cursor:pointer}
+@media (max-width:768px){.bt-btn{width:54px;height:50px}.lb-sub{display:none}}
+@supports (padding-bottom:env(safe-area-inset-bottom)){
+  .btbar{bottom:calc(22px + env(safe-area-inset-bottom))}}
+.tb-btn svg, .tb-tool-btn svg { width: 20px; height: 20px; display: block; flex-shrink: 0; }
 </style>
 </head>
 <body>
-<!-- 常時表示サイドバー -->
-<aside id="sidebar-fixed">
-  <div class="lt-wrap">
-    <div class="lt-name">DXF_View</div>
-    <div class="lt-sub">DXF / PDF を<br>ブラウザで閲覧</div>
+
+<div class="topbar">
+  <button class="tb-btn" id="settingsBtn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg></button>
+  <div class="logo-block">
+    <span class="logo-text">DXF</span>
+    <span class="logo-sub">Viewer</span>
   </div>
-  <button id="openFileBtnMain">ファイルを<br>開く</button>
-  <div class="file-sub">DXF / PDF 対応</div>
+  <div id="fileNameDisplay" title="" style="flex:1;min-width:0;max-width:180px;font-size:12px;color:#8ab4d0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin:0 6px;cursor:default;line-height:1.2;user-select:none;">---</div>
+  <div class="tb-sep"></div>
+  <button class="tb-tool-btn tool-btn active" data-tool="sketch" title="スケッチ"><span class="tb-tool-label">ペン</span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4 12.5-12.5z"/></svg></button>
+  <button class="tb-btn" id="colorIndicatorBtn" title="色選択"><span class="tb-tool-label">色・太さ</span><span id="colorDot" style="display:inline-block;width:14px;height:14px;border-radius:50%;background:rgb(255,0,0);border:1.5px solid #aaa;vertical-align:middle"></span></button>
+  <div class="tb-sep"></div>
+  <button class="tb-tool-btn tool-btn" data-tool="eraser" title="消しゴム"><span class="tb-tool-label">消しゴム</span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m7 21-4.3-4.3c-1-1-1-2.5 0-3.4l9.6-9.6c1-.9 2.5-.9 3.5 0l5.5 5.5c1 1 1 2.5 0 3.5L17 17"/><path d="M22 21H7"/><path d="m5 11 9 9"/></svg></button>
+  <div class="tb-sep"></div>
+  <button class="tb-tool-btn tool-btn" data-tool="dxdy" title="水平/鉛直寸法（自動判定）"><span class="tb-tool-label">水・鉛</span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="3" y1="9" x2="15" y2="9"/><line x1="3" y1="6" x2="3" y2="12"/><line x1="15" y1="6" x2="15" y2="12"/><line x1="18" y1="9" x2="18" y2="21"/><line x1="15" y1="9" x2="21" y2="9"/><line x1="15" y1="21" x2="21" y2="21"/></svg></button>
+  <button class="tb-tool-btn tool-btn" data-tool="diag" title="斜め寸法"><span class="tb-tool-label">斜め</span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="5" y1="19" x2="19" y2="5"/><polyline points="5 13 5 19 11 19"/><polyline points="13 5 19 5 19 11"/></svg></button>
+  <button class="tb-tool-btn tool-btn" data-tool="lp" title="線と点 距離"><span class="tb-tool-label">線と点</span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="20" height="20"><line x1="3" y1="21" x2="21" y2="3"/><circle cx="17" cy="17" r="3"/><line x1="17" y1="14" x2="12" y2="9" stroke-dasharray="2,2"/></svg></button>
+  <button class="tb-tool-btn tool-btn" data-tool="circDim" title="直径寸法（φ）"><span class="tb-tool-label">直径</span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="20" height="20"><circle cx="12" cy="12" r="8"/><line x1="4" y1="12" x2="20" y2="12"/></svg></button>
+  <button class="tb-tool-btn tool-btn" data-tool="radDim" title="半径寸法（R）"><span class="tb-tool-label">半径</span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="20" height="20"><circle cx="12" cy="12" r="8"/><line x1="12" y1="12" x2="20" y2="12"/><text x="14" y="11" font-size="5" fill="currentColor" stroke="none">R</text></svg></button>
+  <button class="tb-btn" id="clearDimsBtn" title="寸法を全消去" style="font-size:13px;color:#e8a84a;"><span class="tb-tool-label" style="color:#e8a84a">全消去</span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="14" width="20" height="7" rx="1"/><line x1="6" y1="14" x2="6" y2="18"/><line x1="10" y1="14" x2="10" y2="17"/><line x1="14" y1="14" x2="14" y2="17"/><line x1="18" y1="14" x2="18" y2="18"/><polyline points="9 3 9 8"/><polyline points="15 3 15 8"/><line x1="7" y1="3" x2="17" y2="3"/><line x1="9" y1="8" x2="15" y2="8"/></svg></button>
+  <button class="tb-btn" id="fitBtnTb" title="全体表示"><span class="tb-tool-label">全体</span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 3 21 3 21 9"/><polyline points="9 21 3 21 3 15"/><line x1="21" y1="3" x2="14" y2="10"/><line x1="3" y1="21" x2="10" y2="14"/></svg></button>
+  <div class="tb-sep"></div>
+  <button class="tb-btn" id="undoBtn" title="元に戻す" style="font-size:18px;opacity:0.35"><span class="tb-tool-label">戻る</span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 1 0 .49-4.95"/></svg></button>
+  <button class="tb-btn" id="redoBtn" title="進む" style="font-size:18px;opacity:0.35"><span class="tb-tool-label">進む</span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-.49-4.95"/></svg></button>
+  <button class="tb-btn" id="savePDFBtn" title="図面全体をPDF出力">
+  <span class="tb-tool-label">PDF</span>
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="8" y1="13" x2="16" y2="13"/><line x1="8" y1="17" x2="16" y2="17"/><line x1="8" y1="10" x2="11" y2="10"/></svg>
+</button>
+  <button class="tb-btn" id="screenshotBtn" title="スクリーンショット">
+  <span class="tb-tool-label">スクショ</span>
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg>
+</button>
+  <button class="tb-btn" id="exportDxfBtn" title="書き込みをDXF書き出し">
+  <span class="tb-tool-label">DXF書出</span>
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+</button>
+</div>
+
+<div class="stage" id="stage">
+  <canvas id="cv"></canvas>
+  <canvas id="ov"></canvas>
+  <div id="noDrawingMsg">
+    <svg width="72" height="68" viewBox="0 0 72 68" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <rect x="2" y="4" width="68" height="46" rx="3" stroke="#4a6080" stroke-width="2.5"/>
+      <line x1="2" y1="19" x2="70" y2="19" stroke="#4a6080" stroke-width="1.5"/>
+      <line x1="2" y1="34" x2="70" y2="34" stroke="#4a6080" stroke-width="1.5"/>
+      <line x1="20" y1="4" x2="20" y2="50" stroke="#4a6080" stroke-width="1.5"/>
+      <line x1="38" y1="4" x2="38" y2="50" stroke="#4a6080" stroke-width="1.5"/>
+      <line x1="56" y1="4" x2="56" y2="50" stroke="#4a6080" stroke-width="1.5"/>
+      <rect x="27" y="50" width="18" height="8" fill="#4a6080"/>
+      <rect x="17" y="58" width="38" height="6" rx="2" fill="#4a6080"/>
+    </svg>
+    <span class="nd-text">NO DRAWING LOADED</span>
+  </div>
+  <div class="viewmemo" id="viewmemo">
+    <button class="full-row" id="fitBtn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 3 21 3 21 9"/><polyline points="9 21 3 21 3 15"/><line x1="21" y1="3" x2="14" y2="10"/><line x1="3" y1="21" x2="10" y2="14"/></svg> 全体</button>
+    <button class="mem-btn" data-vi="0"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width:14px;height:14px;vertical-align:middle;margin-right:3px;"><path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/></svg>記憶</button><button class="show-btn" data-vs="0"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width:14px;height:14px;vertical-align:middle;margin-right:3px;"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>表示</button>
+    <button class="mem-btn" data-vi="1"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width:14px;height:14px;vertical-align:middle;margin-right:3px;"><path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/></svg>記憶</button><button class="show-btn" data-vs="1"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width:14px;height:14px;vertical-align:middle;margin-right:3px;"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>表示</button>
+    <button class="mem-btn" data-vi="2"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width:14px;height:14px;vertical-align:middle;margin-right:3px;"><path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/></svg>記憶</button><button class="show-btn" data-vs="2"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width:14px;height:14px;vertical-align:middle;margin-right:3px;"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>表示</button>
+  </div>
+  <div id="snap-hint"></div>
+</div>
+
+<div id="settingsOverlay"></div>
+<div id="settingsPanel">
+  <div class="sp-header">
+    <span class="sp-title">設定</span>
+    <button class="sp-close" id="settingsClose">✕</button>
+  </div>
+  <button id="openFileBtnMain">
+    <span class="sp-file-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg></span>
+    <span>ファイルを開く<br><small style="font-size:12px;opacity:.7">DXF / PDF 対応</small></span>
+  </button>
+  <div class="sp-section">
+    <div class="sp-label">白・黒画面</div>
+    <div class="sp-row">
+      <button class="sp-toggle-btn active" id="bwBlack">■ 黒</button>
+      <button class="sp-toggle-btn" id="bwWhite">□ 白</button>
+    </div>
+  </div>
+  <div class="sp-section">
+    <div class="sp-label">縮尺分母</div>
+    <input type="number" id="scaleDenom" value="1" min="1" class="sp-input">
+  </div>
+  <div class="sp-section" id="pdfPageCtrl" style="display:none">
+    <div class="sp-label">ページ</div>
+    <div class="sp-row">
+      <button id="prevPage" class="sp-page-btn">◀</button>
+      <span id="pageInfo" class="sp-page-info">1/1</span>
+      <button id="nextPage" class="sp-page-btn">▶</button>
+    </div>
+  </div>
+  <div class="sp-section">
+    <button id="layerBtn" class="sp-action-btn">レイヤ設定</button>
+  </div>
+  <div class="sp-section">
+    <div class="sp-label">DXF情報</div>
+    <div class="info-box" id="infoBox" style="font-size:12px;color:#888;background:#0a0c10;border:1px solid #2a3040;border-radius:8px;padding:8px;min-height:44px;line-height:1.6">ファイルを開いてください</div>
+  </div>
+  <div class="sp-section" style="display:flex;flex-direction:column;gap:8px">
+    <button id="rangeAreaPDFBtn" class="sp-action-btn">範囲PDF保存</button>
+    <button id="clearBtn" class="sp-danger-btn">全消去</button>
+  </div>
+  <div id="ver-label">DXF_View V0_57</div>
+</div>
+
+<div id="colorOverlay">
   <div>
-    <div class="bw-label">白・黒画面</div>
-    <div class="bw-btns">
-      <button class="bw-btn active" id="bwBlack">■黒</button>
-      <button class="bw-btn" id="bwWhite">□白</button>
+    <div class="co-label">カラー</div>
+    <div class="co-colors">
+      <button class="color-btn active" data-color="255,0,0" style="background:#f00" title="赤"></button>
+      <button class="color-btn" data-color="255,140,0" style="background:#f80" title="橙"></button>
+      <button class="color-btn" data-color="0,200,0" style="background:#0c8" title="緑"></button>
+      <button class="color-btn" data-color="0,120,255" style="background:#08f" title="青"></button>
+      <button class="color-btn" data-color="255,0,180" style="background:#f0b" title="ピンク"></button>
     </div>
   </div>
-</aside>
-
-<!-- スライド式設定パネル -->
-<aside id="sidebar">
-  <button id="sidebarClose" style="width:32px;height:32px;font-size:16px;padding:0;align-self:flex-start">✕</button>
-  <div class="sidebar-section">
-    <div class="sidebar-label">計測ツール</div>
-    <div class="tool-grid">
-      <button class="tool-btn" data-tool="select">↖ 選択</button>
-      <button class="tool-btn" data-tool="dx">←→ 水平</button>
-      <button class="tool-btn" data-tool="dy">↕ 垂直</button>
-      <button class="tool-btn" data-tool="diag">↗ 斜め</button>
+  <div>
+    <div class="co-label">線幅</div>
+    <div class="co-lw">
+      <button class="lw-btn active" data-lw="1">細</button>
+      <button class="lw-btn" data-lw="2.5">中</button>
+      <button class="lw-btn" data-lw="5">太</button>
     </div>
-  </div>
-  <div class="sidebar-section">
-    <div class="sidebar-label">縮尺分母</div>
-    <input type="number" id="scaleDenom" value="1" min="1">
-  </div>
-  <div class="sidebar-section" id="pdfPageCtrl" style="display:none">
-    <div class="sidebar-label">ページ</div>
-    <div class="row">
-      <button id="prevPage">◀</button>
-      <span id="pageInfo">1/1</span>
-      <button id="nextPage">▶</button>
-    </div>
-  </div>
-  <div class="sidebar-section">
-    <button id="layerBtn">レイヤ設定</button>
-  </div>
-  <div class="sidebar-section">
-    <div class="sidebar-label">DXF情報</div>
-    <div class="info-box" id="infoBox">ファイルを開いてください</div>
-  </div>
-  <div id="ver-label">DXF_View_V0_03</div>
-</aside>
-<input type="file" id="file" hidden>
-
-<!-- メインエリア -->
-<div class="main">
-  <div class="topbar">
-    <div class="logo-block">
-      <span class="lb-name">DXF_View</span>
-      <span class="lb-sub">DXF / PDF をブラウザで閲覧</span>
-    </div>
-    <button id="sidebarOpen" title="設定・計測">☰</button>
-    <div class="sep"></div>
-    <button class="tool-btn active" data-tool="sketch" title="ペン">✏</button>
-    <button class="tool-btn" data-tool="eraser" title="消しゴム">⌫</button>
-    <div class="sep"></div>
-    <button class="color-btn active" data-color="255,0,0" style="background:#f00" title="赤"></button>
-    <button class="color-btn" data-color="255,140,0" style="background:#f80" title="橙"></button>
-    <button class="color-btn" data-color="0,200,0" style="background:#0c8" title="緑"></button>
-    <button class="color-btn" data-color="0,120,255" style="background:#08f" title="青"></button>
-    <button class="color-btn" data-color="255,0,180" style="background:#f0b" title="ピンク"></button>
-    <div class="sep"></div>
-    <button class="lw-btn active" data-lw="1" title="細">•</button>
-    <button class="lw-btn" data-lw="2.5" title="中">●</button>
-    <button class="lw-btn" data-lw="5" title="太">⬤</button>
-    <div class="sep"></div>
-    <button id="undoBtn">戻す</button>
-    <button id="clearBtn">全消去</button>
-    <div class="spacer"></div>
-    <button id="rangeAreaPDFBtn">範囲PDF</button>
-    <button id="savePDFBtn">↓ PDF保存</button>
-    <button id="fullscreenBtn">全画面⛶</button>
-  </div>
-  <div class="stage" id="stage">
-    <canvas id="cv"></canvas>
-    <canvas id="ov"></canvas>
-    <div id="noDrawingMsg">
-      <svg width="68" height="64" viewBox="0 0 68 64" fill="none" xmlns="http://www.w3.org/2000/svg">
-        <rect x="2" y="4" width="64" height="44" rx="3" stroke="#4a6080" stroke-width="2.5"/>
-        <line x1="2" y1="18" x2="66" y2="18" stroke="#4a6080" stroke-width="1.5"/>
-        <line x1="2" y1="32" x2="66" y2="32" stroke="#4a6080" stroke-width="1.5"/>
-        <line x1="19" y1="4" x2="19" y2="48" stroke="#4a6080" stroke-width="1.5"/>
-        <line x1="36" y1="4" x2="36" y2="48" stroke="#4a6080" stroke-width="1.5"/>
-        <line x1="53" y1="4" x2="53" y2="48" stroke="#4a6080" stroke-width="1.5"/>
-        <rect x="26" y="48" width="16" height="7" fill="#4a6080"/>
-        <rect x="16" y="55" width="36" height="5" rx="2" fill="#4a6080"/>
-      </svg>
-      <span class="nd-text">NO DRAWING LOADED</span>
-    </div>
-    <div class="viewmemo" id="viewmemo">
-      <button class="full-row" id="fitBtn">全体</button>
-      <button class="mem-btn" data-vi="0">記憶</button><button class="show-btn" data-vs="0">表示</button>
-      <button class="mem-btn" data-vi="1">記憶</button><button class="show-btn" data-vs="1">表示</button>
-      <button class="mem-btn" data-vi="2">記憶</button><button class="show-btn" data-vs="2">表示</button>
-    </div>
-    <div id="snap-hint"></div>
   </div>
 </div>
 
@@ -240,30 +283,20 @@ button.active{background:var(--accent);color:#000;border-color:var(--accent)}
   <div class="modal-box">
     <h3>レイヤ設定</h3>
     <div id="layerList"></div>
-    <button id="layerClose">閉じる</button>
+    <button class="modal-close-btn" id="layerClose">閉じる</button>
   </div>
 </div>
+
+<input type="file" id="file" hidden>
+
+<script src="viewer.js"></script>
 <script>
-// =========================================================
-// PDF.js worker
-// =========================================================
-if(typeof pdfjsLib!=='undefined'){
-  pdfjsLib.GlobalWorkerOptions.workerSrc='https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
-}
+const APP_VERSION = 'V0_57';
 
 // =========================================================
 // グローバル状態
 // =========================================================
-const cv=document.getElementById('cv');
-const ov=document.getElementById('ov');
-const stage=document.getElementById('stage');
-const ctx=cv.getContext('2d');
-const octx=ov.getContext('2d');
 
-let doc=null;
-let currentFileName='';
-let tx=0,ty=0,scale=1;
-let bwMode=false;
 let scaleDenom=1;
 let currentTool='sketch';
 let currentColor={r:255,g:0,b:0};
@@ -272,581 +305,55 @@ let dims=[];
 let strokes=[];
 let images=[];
 let savedViews=[null,null,null];
-let hiddenLayers=new Set();
-let pdfDoc=null,pdfPageNum=1;
-let pdfImage=null;
+let history=[];    // [{strokes,dims}]
+let redoStack=[];  // [{strokes,dims}]
+const MAX_HISTORY=30;
+let dimPendingDown=false;
+let saveTimer=null;
+const SAVE_KEY='dxfview_v1';
+const FILE_KEY='dxfview_v1_file';
 let snapPt=null;
+let currentCursorWorld=null; // 現在のカーソル世界座標（寸法プレビュー用）
 let dimState={pts:[]};
 let sketching=false,sketchPts=[];
 let eraserPos=null;
 let selectedImage=null;
 let dragImageStart=null;
-let rafId=null;
-let needDraw=false,needOverlay=false;
 let isPen=false;
 let mouseDown=false,lastMX=0,lastMY=0,panning=false;
 let pinchDist=null,pinchMid=null;
 const ERASER_RADIUS_PX=20;
 
 // =========================================================
-// ACI カラーテーブル
+// 操作ガイドメッセージ
 // =========================================================
-function aci(n){
-  if(n<=0||n===256) return {r:255,g:255,b:255};
-  const t=[null,[255,0,0],[255,255,0],[0,255,0],[0,255,255],[0,0,255],[255,0,255],[255,255,255],[128,128,128],[192,192,192]];
-  if(n>=1&&n<=9&&t[n]) return {r:t[n][0],g:t[n][1],b:t[n][2]};
-  if(n>=250&&n<=255){const gs=[51,102,153,204,228,255];const g=gs[n-250];return {r:g,g:g,b:g};}
-  const hi=Math.floor((n-10)/10);
-  const lo=(n-10)%10;
-  const hue=(hi*30)%360;
-  const sat=lo<5?1.0-lo*0.15:0.25+(lo-5)*0.15;
-  const val=lo<5?1.0:1.0-(lo-5)*0.1;
-  return hsvToRgb(hue,sat,val);
+let _guideTimer = null;
+function showGuide(msg, autoHideMs){
+  const el = document.getElementById('guideMsg');
+  if(!el) return;
+  el.textContent = msg;
+  el.style.display = msg ? 'block' : 'none';
+  clearTimeout(_guideTimer);
+  if(msg && autoHideMs) _guideTimer = setTimeout(hideGuide, autoHideMs);
 }
-function hsvToRgb(h,s,v){
-  const i=Math.floor(h/60)%6;
-  const f=h/60-Math.floor(h/60);
-  const p=v*(1-s),q=v*(1-f*s),t2=v*(1-(1-f)*s);
-  let r,g,b;
-  if(i===0){r=v;g=t2;b=p}else if(i===1){r=q;g=v;b=p}
-  else if(i===2){r=p;g=v;b=t2}else if(i===3){r=p;g=q;b=v}
-  else if(i===4){r=t2;g=p;b=v}else{r=v;g=p;b=q}
-  return {r:Math.round(r*255),g:Math.round(g*255),b:Math.round(b*255)};
+function hideGuide(){
+  const el = document.getElementById('guideMsg');
+  if(el) el.style.display = 'none';
+  clearTimeout(_guideTimer);
 }
 
-// =========================================================
-// DXF パーサ
-// =========================================================
-function decodeDXF(buf){
-  const head=new Uint8Array(buf,0,Math.min(20,buf.byteLength));
-  if(head[0]===65&&head[1]===117&&head[2]===116)
-    throw new Error('バイナリDXF形式は非対応です。ASCII DXFで保存してください。');
-  try{return new TextDecoder('utf-8',{fatal:true}).decode(buf);}catch(e){}
-  return new TextDecoder('shift_jis').decode(buf);
-}
-
-function parseDXF(buf){
-  const text=decodeDXF(buf);
-  const lines=text.split(/\r?\n/);
-  const P=[];
-  for(let i=0;i<lines.length-1;i+=2){
-    const code=parseInt(lines[i].trim());
-    if(!isNaN(code)) P.push([code,lines[i+1].trimEnd()]);
-  }
-
-  const out={
-    ver:'',sen:[],enko:[],ten:[],moji:[],solid:[],sunpou:[],
-    usedLayers:{},header:{},layerMap:{},ltypeMap:{},blockMap:{}
-  };
-
-  let si=0;
-  function findSection(name){
-    for(let i=0;i<P.length-1;i++){
-      if(P[i][0]===0&&P[i][1]==='SECTION'&&P[i+1][0]===2&&P[i+1][1]===name) return i+2;
-    }
-    return -1;
-  }
-
-  // HEADER
-  const hsi=findSection('HEADER');
-  if(hsi>=0){
-    si=hsi;
-    let curVar='';
-    while(si<P.length){
-      const[c,v]=P[si++];
-      if(c===0&&v==='ENDSEC') break;
-      if(c===9) curVar=v;
-      else if(curVar==='$INSUNITS'&&c===70) out.header.insunits=parseInt(v);
-      else if(curVar==='$DIMSCALE'&&c===40) out.header.dimscale=parseFloat(v);
-      else if(curVar==='$ACADVER'&&c===1) out.ver=v;
-    }
-  }
-
-  // TABLES
-  const tsi=findSection('TABLES');
-  if(tsi>=0){
-    si=tsi;
-    while(si<P.length){
-      const[c,v]=P[si];
-      if(c===0&&v==='ENDSEC') break;
-      if(c===0&&v==='LAYER'){
-        si++;
-        let lname='',lcolor=7,lltype='CONTINUOUS';
-        while(si<P.length){
-          const[lc,lv]=P[si];
-          if(lc===0) break;
-          si++;
-          if(lc===2) lname=lv;
-          else if(lc===62) lcolor=parseInt(lv);
-          else if(lc===6) lltype=lv.toUpperCase();
-        }
-        out.layerMap[lname]={color:Math.abs(lcolor),ltype:lltype,visible:lcolor>=0};
-      } else if(c===0&&v==='LTYPE'){
-        si++;
-        let ltname='';const pat=[];
-        while(si<P.length){
-          const[lc,lv]=P[si];
-          if(lc===0) break;
-          si++;
-          if(lc===2) ltname=lv;
-          else if(lc===49) pat.push(Math.abs(parseFloat(lv)));
-        }
-        out.ltypeMap[ltname.toUpperCase()]=pat;
-      } else si++;
-    }
-  }
-
-  // BLOCKS
-  const bsi=findSection('BLOCKS');
-  if(bsi>=0){
-    si=bsi;
-    let curBlock=null;
-    while(si<P.length){
-      const[c,v]=P[si];
-      if(c===0&&v==='ENDSEC') break;
-      if(c===0&&v==='BLOCK'){
-        si++;
-        let bname='',bx=0,by=0;
-        while(si<P.length){
-          const[bc,bv]=P[si];
-          if(bc===0) break;
-          si++;
-          if(bc===2) bname=bv;
-          else if(bc===10) bx=parseFloat(bv)||0;
-          else if(bc===20) by=parseFloat(bv)||0;
-        }
-        curBlock={name:bname,ox:bx,oy:by,ents:[]};
-        out.blockMap[bname]=curBlock;
-      } else if(c===0&&v==='ENDBLK'){
-        si++;curBlock=null;
-      } else if(c===0&&curBlock){
-        const r=convertOne(P,si,out.layerMap,out.ltypeMap,out.blockMap,0);
-        curBlock.ents.push(...r);
-        si=r._nextSi||si+1;
-      } else si++;
-    }
-  }
-
-  // ENTITIES
-  const esi=findSection('ENTITIES');
-  if(esi>=0){
-    si=esi;
-    while(si<P.length){
-      const[c,v]=P[si];
-      if(c===0&&v==='ENDSEC') break;
-      if(c===0&&v==='POLYLINE'){
-        si++;
-        let plyLayer='0',plyColor=7,plyLtype='',plyLw=0.25,plyClosed=false;
-        while(si<P.length){
-          const[pc,pv]=P[si];
-          if(pc===0) break;
-          si++;
-          if(pc===8) plyLayer=pv;
-          else if(pc===62) plyColor=parseInt(pv);
-          else if(pc===6) plyLtype=pv;
-          else if(pc===70) plyClosed=!!(parseInt(pv)&1);
-          else if(pc===370) plyLw=parseInt(pv)>0?parseInt(pv)/100:0.25;
-        }
-        const plyColorR=aci(Math.abs(plyColor));
-        const plyDash=resolveDash({ltype:plyLtype,layer:plyLayer},out.layerMap,out.ltypeMap);
-        const verts=[];
-        while(si<P.length){
-          const[vc,vv]=P[si];
-          if(vc===0&&vv==='SEQEND'){si++;break;}
-          if(vc===0&&vv==='VERTEX'){
-            si++;
-            let vx=0,vy=0,vbulge=0;
-            while(si<P.length){
-              const[vvc,vvv]=P[si];
-              if(vvc===0) break;
-              si++;
-              if(vvc===10) vx=parseFloat(vvv)||0;
-              else if(vvc===20) vy=parseFloat(vvv)||0;
-              else if(vvc===42) vbulge=parseFloat(vvv)||0;
-            }
-            verts.push({x:vx,y:vy,bulge:vbulge});
-          } else si++;
-        }
-        for(let vi=0;vi<verts.length-1;vi++){
-          const p1=verts[vi],p2=verts[vi+1];
-          if(Math.abs(p1.bulge)>1e-6){
-            const sp=arcSegPts(p1.x,p1.y,p2.x,p2.y,p1.bulge);
-            for(let j=0;j<sp.length-1;j++)
-              out.sen.push({type:'sen',x1:sp[j].x,y1:sp[j].y,x2:sp[j+1].x,y2:sp[j+1].y,color:plyColorR,dash:plyDash,layer:plyLayer,lw:plyLw});
-          } else {
-            out.sen.push({type:'sen',x1:p1.x,y1:p1.y,x2:p2.x,y2:p2.y,color:plyColorR,dash:plyDash,layer:plyLayer,lw:plyLw});
-          }
-        }
-        if(plyClosed&&verts.length>1){
-          const p1=verts[verts.length-1],p2=verts[0];
-          out.sen.push({type:'sen',x1:p1.x,y1:p1.y,x2:p2.x,y2:p2.y,color:plyColorR,dash:plyDash,layer:plyLayer,lw:plyLw});
-        }
-      } else if(c===0){
-        const r=convertOne(P,si,out.layerMap,out.ltypeMap,out.blockMap,0);
-        r.forEach(e=>{
-          if(e.type==='sen') out.sen.push(e);
-          else if(e.type==='enko') out.enko.push(e);
-          else if(e.type==='ten') out.ten.push(e);
-          else if(e.type==='moji') out.moji.push(e);
-          else if(e.type==='solid') out.solid.push(e);
-        });
-        si=r._nextSi||si+1;
-      } else si++;
-    }
-  }
-
-  [...out.sen,...out.enko,...out.ten,...out.moji,...out.solid].forEach(e=>{
-    if(e.layer) out.usedLayers[e.layer]=true;
-  });
-  return out;
-}
-
-function resolveColor(attrs,layerMap){
-  if(attrs.truecolor!==undefined){
-    const c=attrs.truecolor;
-    return {r:(c>>16)&0xff,g:(c>>8)&0xff,b:c&0xff};
-  }
-  const ac=attrs.aciColor;
-  if(ac!==undefined&&ac!==256&&ac!==0) return aci(Math.abs(ac));
-  if(ac===0) return {r:255,g:255,b:255};
-  const ly=attrs.layer||'0';
-  const linfo=layerMap[ly];
-  if(linfo) return aci(linfo.color||7);
-  return {r:255,g:255,b:255};
-}
-
-function resolveDash(attrs,layerMap,ltypeMap){
-  let lt=(attrs.ltype||'').toUpperCase();
-  if(!lt||lt==='BYLAYER'){
-    const linfo=layerMap[attrs.layer||'0'];
-    lt=linfo?(linfo.ltype||'CONTINUOUS'):'CONTINUOUS';
-  }
-  if(lt==='CONTINUOUS'||lt==='') return [];
-  if(lt==='HIDDEN'||lt==='DASHED') return [8,4];
-  if(lt==='CENTER') return [16,4,4,4];
-  if(lt==='DASHDOT') return [12,4,2,4];
-  if(lt==='PHANTOM') return [20,4,4,4,4,4];
-  if(lt==='DOT') return [2,4];
-  if(ltypeMap&&ltypeMap[lt]&&ltypeMap[lt].length>0) return ltypeMap[lt];
-  return [];
-}
-
-function arcSegPts(x1,y1,x2,y2,bulge){
-  const d=Math.sqrt((x2-x1)**2+(y2-y1)**2);
-  if(d<1e-10) return [{x:x1,y:y1},{x:x2,y:y2}];
-  const r=d*(1+bulge*bulge)/(4*Math.abs(bulge));
-  const midx=(x1+x2)/2,midy=(y1+y2)/2;
-  const nx=-(y2-y1)/d,ny=(x2-x1)/d;
-  const s=(r-(d/2)*(bulge*bulge-1)/(2*bulge))/d;
-  const cx=midx+nx*s*Math.sign(bulge)*(d/2);
-  const cy=midy+ny*s*Math.sign(bulge)*(d/2);
-  const a1=Math.atan2(y1-cy,x1-cx);
-  const a2=Math.atan2(y2-cy,x2-cx);
-  const segs=Math.max(8,Math.round(Math.abs(bulge)*20));
-  let da=a2-a1;
-  if(bulge>0&&da<0) da+=2*Math.PI;
-  if(bulge<0&&da>0) da-=2*Math.PI;
-  const pts=[];
-  for(let i=0;i<=segs;i++){
-    const a=a1+da*i/segs;
-    pts.push({x:cx+r*Math.cos(a),y:cy+r*Math.sin(a)});
-  }
-  return pts;
-}
-
-function convertOne(P,si,layerMap,ltypeMap,blockMap,depth){
-  const result=[];
-  result._nextSi=si;
-  if(si>=P.length) return result;
-  const type=P[si][1];si++;
-  const attrs={};const extras=[];
-  while(si<P.length){
-    const[c,v]=P[si];
-    if(c===0) break;
-    si++;
-    if(c===8) attrs.layer=v;
-    else if(c===6) attrs.ltype=v;
-    else if(c===62) attrs.aciColor=parseInt(v);
-    else if(c===420) attrs.truecolor=parseInt(v);
-    else if(c===370) attrs.lw=parseInt(v);
-    else extras.push([c,v]);
-  }
-  result._nextSi=si;
-  const color=resolveColor(attrs,layerMap);
-  const dash=resolveDash(attrs,layerMap,ltypeMap);
-  const layer=attrs.layer||'0';
-  const lw=attrs.lw&&attrs.lw>0?attrs.lw/100:0.25;
-  function gv(code,def){for(const[c,v]of extras)if(c===code)return v;return def!==undefined?def:null;}
-  function gf(code,def=0){const v=gv(code,null);return v!==null?(parseFloat(v)||def):def;}
-  function gi(code,def=0){const v=gv(code,null);return v!==null?(parseInt(v)||def):def;}
-
-  if(type==='LINE'){
-    result.push({type:'sen',x1:gf(10),y1:gf(20),x2:gf(11),y2:gf(21),color,dash,layer,lw});
-  } else if(type==='CIRCLE'){
-    const cx=gf(10),cy=gf(20),r=gf(40);
-    result.push({type:'enko',cx,cy,r,a1:0,a2:360,color,dash,layer,lw,tilt:0,rx:r,ry:r});
-  } else if(type==='ARC'){
-    result.push({type:'enko',cx:gf(10),cy:gf(20),r:gf(40),a1:gf(50),a2:gf(51),color,dash,layer,lw,tilt:0,rx:gf(40),ry:gf(40)});
-  } else if(type==='ELLIPSE'){
-    const cx=gf(10),cy=gf(20),mx=gf(11),my=gf(21);
-    const ratio=gf(40,1);
-    const rx=Math.sqrt(mx*mx+my*my);
-    const ry=rx*ratio;
-    const tilt=Math.atan2(my,mx)*180/Math.PI;
-    const a1=gf(41)*180/Math.PI,a2r=gf(42);
-    const a2=a2r?a2r*180/Math.PI:360;
-    result.push({type:'enko',cx,cy,r:rx,a1,a2,color,dash,layer,lw,tilt,rx,ry});
-  } else if(type==='POINT'){
-    result.push({type:'ten',x:gf(10),y:gf(20),color,layer});
-  } else if(type==='TEXT'||type==='ATTRIB'){
-    result.push({type:'moji',x:gf(10),y:gf(20),text:gv(1,'')||'',h:gf(40,1),angle:gf(50,0),color,layer,widthFactor:gf(41,1)||1});
-  } else if(type==='MTEXT'){
-    let txt=gv(1,'')||'';
-    txt=txt.replace(/\\[pP]/g,'\n').replace(/\{\\[^;]+;/g,'').replace(/\}/g,'').replace(/\\[A-Za-z][^;]*;/g,'').replace(/%%[cCdDpP]/g,'');
-    result.push({type:'moji',x:gf(10),y:gf(20),text:txt,h:gf(40,1),angle:0,color,layer,widthFactor:1});
-  } else if(type==='SOLID'||type==='TRACE'){
-    const pts=[{x:gf(10),y:gf(20)},{x:gf(11),y:gf(21)},{x:gf(13),y:gf(23)},{x:gf(12),y:gf(22)}];
-    result.push({type:'solid',pts,color,layer});
-  } else if(type==='3DFACE'){
-    const pts=[{x:gf(10),y:gf(20)},{x:gf(11),y:gf(21)},{x:gf(12),y:gf(22)},{x:gf(13),y:gf(23)}];
-    result.push({type:'solid',pts,color,layer});
-  } else if(type==='LWPOLYLINE'){
-    const closed=gi(70,0)&1;
-    const pts2=[];
-    for(const[c,v]of extras){
-      if(c===10) pts2.push({x:parseFloat(v)||0,y:0,bulge:0});
-      else if(c===20&&pts2.length>0) pts2[pts2.length-1].y=parseFloat(v)||0;
-      else if(c===42&&pts2.length>0) pts2[pts2.length-1].bulge=parseFloat(v)||0;
-    }
-    const n=pts2.length;
-    for(let i=0;i<n-1;i++){
-      const p1=pts2[i],p2=pts2[i+1];
-      if(Math.abs(p1.bulge)>1e-6){
-        const sp=arcSegPts(p1.x,p1.y,p2.x,p2.y,p1.bulge);
-        for(let j=0;j<sp.length-1;j++)
-          result.push({type:'sen',x1:sp[j].x,y1:sp[j].y,x2:sp[j+1].x,y2:sp[j+1].y,color,dash,layer,lw});
-      } else {
-        result.push({type:'sen',x1:p1.x,y1:p1.y,x2:p2.x,y2:p2.y,color,dash,layer,lw});
-      }
-    }
-    if(closed&&n>1){
-      const p1=pts2[n-1],p2=pts2[0];
-      if(Math.abs(p1.bulge)>1e-6){
-        const sp=arcSegPts(p1.x,p1.y,p2.x,p2.y,p1.bulge);
-        for(let j=0;j<sp.length-1;j++)
-          result.push({type:'sen',x1:sp[j].x,y1:sp[j].y,x2:sp[j+1].x,y2:sp[j+1].y,color,dash,layer,lw});
-      } else {
-        result.push({type:'sen',x1:p1.x,y1:p1.y,x2:p2.x,y2:p2.y,color,dash,layer,lw});
-      }
-    }
-  } else if(type==='SPLINE'){
-    const cpts=[];
-    for(let i=0;i<extras.length-1;i++){
-      if(extras[i][0]===10&&extras[i+1][0]===20)
-        cpts.push({x:parseFloat(extras[i][1])||0,y:parseFloat(extras[i+1][1])||0});
-    }
-    for(let i=0;i<cpts.length-1;i++)
-      result.push({type:'sen',x1:cpts[i].x,y1:cpts[i].y,x2:cpts[i+1].x,y2:cpts[i+1].y,color,dash,layer,lw});
-  } else if(type==='LEADER'){
-    const lpts=[];
-    for(let i=0;i<extras.length-1;i++){
-      if(extras[i][0]===10&&extras[i+1][0]===20)
-        lpts.push({x:parseFloat(extras[i][1])||0,y:parseFloat(extras[i+1][1])||0});
-    }
-    for(let i=0;i<lpts.length-1;i++)
-      result.push({type:'sen',x1:lpts[i].x,y1:lpts[i].y,x2:lpts[i+1].x,y2:lpts[i+1].y,color,dash,layer,lw});
-  } else if(type==='INSERT'){
-    if(depth<12){
-      const bname=gv(2,'')||'';
-      const ix=gf(10),iy=gf(20);
-      const sx=gf(41,1)||1,sy=gf(42,1)||1;
-      const rot=gf(50,0)*Math.PI/180;
-      const block=blockMap[bname];
-      if(block){
-        const cos=Math.cos(rot),sin=Math.sin(rot);
-        function transform(x,y){
-          const lx=x-block.ox,ly=y-block.oy;
-          return {x:ix+lx*sx*cos-ly*sy*sin,y:iy+lx*sx*sin+ly*sy*cos};
-        }
-        for(const e of block.ents){
-          const ne=JSON.parse(JSON.stringify(e));
-          if(ne.type==='sen'){
-            const p1=transform(ne.x1,ne.y1),p2=transform(ne.x2,ne.y2);
-            ne.x1=p1.x;ne.y1=p1.y;ne.x2=p2.x;ne.y2=p2.y;
-          } else if(ne.type==='enko'){
-            const p=transform(ne.cx,ne.cy);
-            ne.cx=p.x;ne.cy=p.y;ne.rx*=sx;ne.ry*=sy;ne.r*=sx;ne.tilt+=rot*180/Math.PI;
-          } else if(ne.type==='ten'||ne.type==='moji'){
-            const p=transform(ne.x,ne.y);ne.x=p.x;ne.y=p.y;
-          } else if(ne.type==='solid'){
-            ne.pts=ne.pts.map(pt=>{const p=transform(pt.x,pt.y);return{x:p.x,y:p.y};});
-          }
-          result.push(ne);
-        }
-      }
-    }
-  } else if(type==='DIMENSION'){
-    const bname=gv(2,'')||'';
-    if(bname&&blockMap[bname]&&depth<12){
-      for(const e of blockMap[bname].ents) result.push(JSON.parse(JSON.stringify(e)));
-    }
-  }
-  return result;
-}
-
-// =========================================================
-// ワールド <-> スクリーン変換
-// =========================================================
-function w2s(x,y){return [x*scale+tx,-y*scale+ty];}
-function s2w(sx,sy){return [(sx-tx)/scale,-(sy-ty)/scale];}
-function zoomAt(cx,cy,factor){tx=(tx-cx)*factor+cx;ty=(ty-cy)*factor+cy;scale*=factor;}
-
-function rgbCss(c,darkBg){
-  if(bwMode) return '#000';
-  if(darkBg&&c.r<20&&c.g<20&&c.b<20) return '#ffffff';
-  if(!darkBg&&c.r>235&&c.g>235&&c.b>235) return '#000000';
-  return `rgb(${c.r},${c.g},${c.b})`;
-}
-
-// =========================================================
-// BBox & Fit
-// =========================================================
-function computeBBox(){
-  let minx=Infinity,miny=Infinity,maxx=-Infinity,maxy=-Infinity;
-  function exp(x,y){if(x<minx)minx=x;if(y<miny)miny=y;if(x>maxx)maxx=x;if(y>maxy)maxy=y;}
-  if(doc){
-    for(const e of doc.sen){exp(e.x1,e.y1);exp(e.x2,e.y2);}
-    for(const e of doc.enko){exp(e.cx-e.rx,e.cy-e.ry);exp(e.cx+e.rx,e.cy+e.ry);}
-    for(const e of doc.ten){exp(e.x,e.y);}
-    for(const e of doc.moji){exp(e.x,e.y);}
-    for(const e of doc.solid){for(const p of e.pts)exp(p.x,p.y);}
-  }
-  if(pdfImage){exp(pdfImage.wx,pdfImage.wy);exp(pdfImage.wx+pdfImage.ww,pdfImage.wy-pdfImage.wh);}
-  for(const img of images){exp(img.wx,img.wy);exp(img.wx+img.ww,img.wy-img.wh);}
-  if(!isFinite(minx)) return {minx:0,miny:0,maxx:cv.width,maxy:cv.height};
-  return {minx,miny,maxx,maxy};
-}
-
-function fit(){
-  const bb=computeBBox();
-  const W=cv.width,H=cv.height;
-  const dw=bb.maxx-bb.minx,dh=bb.maxy-bb.miny;
-  if(dw<1e-10||dh<1e-10){scale=1;tx=W/2;ty=H/2;return;}
-  const s=Math.min(W*0.9/dw,H*0.9/dh);
-  scale=s;
-  tx=W/2-((bb.minx+bb.maxx)/2)*s;
-  ty=H/2+((bb.miny+bb.maxy)/2)*s;
-}
-
-// =========================================================
-// 描画
-// =========================================================
-function scheduleDraw(){needDraw=true;needOverlay=true;if(!rafId)rafId=requestAnimationFrame(rafLoop);}
-function scheduleOverlay(){needOverlay=true;if(!rafId)rafId=requestAnimationFrame(rafLoop);}
-function rafLoop(){
-  rafId=null;
-  if(needDraw){draw();needDraw=false;}
-  if(needOverlay){drawOverlay();needOverlay=false;}
-}
-
-function draw(){
-  const W=cv.width,H=cv.height;
-  const darkBg=!bwMode;
-  ctx.clearRect(0,0,W,H);
-  ctx.fillStyle=bwMode?'#ffffff':'#1e2430';
-  ctx.fillRect(0,0,W,H);
-  if(!doc&&!pdfImage) return;
-  if(pdfImage){
-    const[sx,sy]=w2s(pdfImage.wx,pdfImage.wy);
-    ctx.drawImage(pdfImage.img,sx,sy,pdfImage.ww*scale,pdfImage.wh*scale);
-  }
-  if(!doc) return;
-  // Solids
-  for(const e of doc.solid){
-    if(hiddenLayers.has(e.layer)) continue;
-    const pts=e.pts.filter(p=>isFinite(p.x)&&isFinite(p.y));
-    if(pts.length<3) continue;
-    ctx.beginPath();
-    const[sx0,sy0]=w2s(pts[0].x,pts[0].y);ctx.moveTo(sx0,sy0);
-    for(let i=1;i<pts.length;i++){const[sx,sy]=w2s(pts[i].x,pts[i].y);ctx.lineTo(sx,sy);}
-    ctx.closePath();
-    ctx.fillStyle=bwMode?'#cccccc':rgbCss(e.color,darkBg);ctx.fill();
-  }
-  // Lines
-  for(const e of doc.sen){
-    if(hiddenLayers.has(e.layer)) continue;
-    const[sx1,sy1]=w2s(e.x1,e.y1);const[sx2,sy2]=w2s(e.x2,e.y2);
-    ctx.beginPath();
-    ctx.strokeStyle=bwMode?'#000000':rgbCss(e.color,darkBg);
-    ctx.lineWidth=Math.max(0.5,e.lw*scale);
-    ctx.setLineDash(e.dash&&e.dash.length>0?e.dash.map(d=>d*scale):[]);
-    ctx.moveTo(sx1,sy1);ctx.lineTo(sx2,sy2);ctx.stroke();
-  }
-  // Arcs
-  for(const e of doc.enko){
-    if(hiddenLayers.has(e.layer)) continue;
-    ctx.beginPath();
-    ctx.strokeStyle=bwMode?'#000000':rgbCss(e.color,darkBg);
-    ctx.lineWidth=Math.max(0.5,e.lw*scale);
-    ctx.setLineDash(e.dash&&e.dash.length>0?e.dash.map(d=>d*scale):[]);
-    drawArc(ctx,e);ctx.stroke();
-  }
-  ctx.setLineDash([]);
-  // Points
-  for(const e of doc.ten){
-    if(hiddenLayers.has(e.layer)) continue;
-    const[sx,sy]=w2s(e.x,e.y);
-    ctx.beginPath();ctx.arc(sx,sy,3,0,Math.PI*2);
-    ctx.fillStyle=bwMode?'#000000':rgbCss(e.color,darkBg);ctx.fill();
-  }
-  // Text
-  for(const e of doc.moji){
-    if(hiddenLayers.has(e.layer)) continue;
-    drawText(ctx,e,darkBg);
-  }
-}
-
-function drawArc(ctx,e){
-  const[sx,sy]=w2s(e.cx,e.cy);
-  if(Math.abs(e.tilt)<0.01&&Math.abs(e.rx-e.ry)<0.01){
-    const rs=e.r*scale;
-    if(Math.abs(e.a2-e.a1-360)<0.01||(e.a1===0&&e.a2===360)){
-      ctx.arc(sx,sy,rs,0,Math.PI*2);
-    } else {
-      const a1=e.a1*Math.PI/180,a2=e.a2*Math.PI/180;
-      ctx.arc(sx,sy,rs,-a1,-a2,e.a1>e.a2);
-    }
-  } else {
-    ctx.save();ctx.translate(sx,sy);ctx.rotate(-e.tilt*Math.PI/180);
-    const rx=e.rx*scale,ry=e.ry*scale;
-    let a1=e.a1*Math.PI/180,a2=e.a2*Math.PI/180;
-    if(Math.abs(e.a2-e.a1-360)<0.01) a2=a1+Math.PI*2;
-    ctx.ellipse(0,0,rx,ry,0,-a1,-a2,a1>a2);
-    ctx.restore();
-  }
-}
-
-function drawText(ctx,e,darkBg){
-  if(!e.text||!e.text.trim()) return;
-  const[sx,sy]=w2s(e.x,e.y);
-  const fs=Math.max(6,e.h*scale);
-  ctx.save();
-  ctx.translate(sx,sy);ctx.rotate(-e.angle*Math.PI/180);
-  if(e.widthFactor&&Math.abs(e.widthFactor-1)>0.01) ctx.scale(e.widthFactor,1);
-  ctx.font=`${fs}px sans-serif`;
-  ctx.fillStyle=bwMode?'#000000':rgbCss(e.color,darkBg);
-  ctx.textBaseline='alphabetic';
-  const lines=e.text.split('\n');
-  for(let i=0;i<lines.length;i++) ctx.fillText(lines[i],0,-fs*i);
-  ctx.restore();
-}
 
 // =========================================================
 // オーバーレイ描画
 // =========================================================
 function drawOverlay(){
-  const W=ov.width,H=ov.height;
-  octx.clearRect(0,0,W,H);
+  const dpr=window.devicePixelRatio||1;
+  // 物理ピクセルサイズで全クリア
+  octx.clearRect(0,0,ov.width,ov.height);
+  // dprスケールを設定
+  octx.save();
+  octx.scale(dpr,dpr);
+  const W=ov.width/dpr, H=ov.height/dpr;
   // Images
   for(const img of images){
     const[sx,sy]=w2s(img.wx,img.wy);
@@ -863,25 +370,43 @@ function drawOverlay(){
   }
   // Dims
   for(const d of dims) drawDimEntity(octx,d);
-  // Strokes
+  // Strokes（moveTo/lineTo直描画 - V0_13でsmoothPath廃止）
   for(const s of strokes){
-    if(s.pts.length<2) continue;
+    if(!s.pts || s.pts.length < 2) continue;
+    octx.save();
+    octx.strokeStyle = `rgba(${s.color.r},${s.color.g},${s.color.b},0.9)`;
+    octx.lineWidth = Math.max(1, s.lw * scale);
+    octx.lineCap = 'round';
+    octx.lineJoin = 'round';
     octx.beginPath();
-    const[sx0,sy0]=w2s(s.pts[0].x,s.pts[0].y);octx.moveTo(sx0,sy0);
-    for(let i=1;i<s.pts.length;i++){const[sx,sy]=w2s(s.pts[i].x,s.pts[i].y);octx.lineTo(sx,sy);}
-    octx.strokeStyle=`rgb(${s.color.r},${s.color.g},${s.color.b})`;
-    octx.lineWidth=s.lw*scale;octx.lineJoin='round';octx.lineCap='round';octx.setLineDash([]);octx.stroke();
+    const [sx0,sy0] = w2s(s.pts[0].x, s.pts[0].y);
+    octx.moveTo(sx0, sy0);
+    for(let i = 1; i < s.pts.length; i++){
+      const [sx,sy] = w2s(s.pts[i].x, s.pts[i].y);
+      octx.lineTo(sx, sy);
+    }
+    octx.stroke();
+    octx.restore();
   }
-  // Current sketch
-  if(sketching&&sketchPts.length>1){
+  // Current sketch（moveTo/lineTo直描画）
+  if(sketching && sketchPts.length >= 2){
+    octx.save();
+    octx.strokeStyle = `rgba(${currentColor.r},${currentColor.g},${currentColor.b},0.9)`;
+    octx.lineWidth = Math.max(1, currentLW);
+    octx.lineCap = 'round';
+    octx.lineJoin = 'round';
     octx.beginPath();
-    const[sx0,sy0]=w2s(sketchPts[0].x,sketchPts[0].y);octx.moveTo(sx0,sy0);
-    for(let i=1;i<sketchPts.length;i++){const[sx,sy]=w2s(sketchPts[i].x,sketchPts[i].y);octx.lineTo(sx,sy);}
-    octx.strokeStyle=`rgb(${currentColor.r},${currentColor.g},${currentColor.b})`;
-    octx.lineWidth=currentLW;octx.lineJoin='round';octx.lineCap='round';octx.setLineDash([]);octx.stroke();
+    const [sx0_,sy0_] = w2s(sketchPts[0].x, sketchPts[0].y);
+    octx.moveTo(sx0_, sy0_);
+    for(let i = 1; i < sketchPts.length; i++){
+      const [sx_,sy_] = w2s(sketchPts[i].x, sketchPts[i].y);
+      octx.lineTo(sx_, sy_);
+    }
+    octx.stroke();
+    octx.restore();
   }
   // Dim guide
-  if((currentTool==='dx'||currentTool==='dy'||currentTool==='diag')&&dimState.pts.length>0){
+  if((currentTool==='dx'||currentTool==='dy'||currentTool==='dxdy'||currentTool==='diag')&&dimState.pts.length>0){
     octx.strokeStyle='#2ecc71';octx.lineWidth=1;octx.setLineDash([4,4]);
     for(let i=0;i<dimState.pts.length-1;i++){
       const[sx1,sy1]=w2s(dimState.pts[i].x,dimState.pts[i].y);
@@ -894,12 +419,71 @@ function drawOverlay(){
       octx.beginPath();octx.arc(sx,sy,5,0,Math.PI*2);octx.fillStyle='#2ecc71';octx.fill();
     }
   }
-  // Snap indicator
+  // Snap indicator (タイプ別マーカー)
   if(snapPt){
     const[sx,sy]=w2s(snapPt.x,snapPt.y);
-    octx.strokeStyle='#f39c12';octx.lineWidth=2;octx.setLineDash([]);
-    octx.beginPath();octx.arc(sx,sy,8,0,Math.PI*2);octx.stroke();
-    octx.beginPath();octx.moveTo(sx-11,sy);octx.lineTo(sx+11,sy);octx.moveTo(sx,sy-11);octx.lineTo(sx,sy+11);octx.stroke();
+    const STC={
+      int:{col:'#ffd700',lbl:'交点'},
+      end:{col:'#00ff7f',lbl:'端点'},
+      cen:{col:'#00f0ff',lbl:'中心'},
+      mid:{col:'#ffbb33',lbl:'中点'},
+    };
+    const sc=STC[snapPt.type]||{col:'#f39c12',lbl:''};
+    octx.strokeStyle=sc.col;octx.fillStyle=sc.col;
+    octx.lineWidth=2;octx.setLineDash([]);
+    if(snapPt.type==='int'){
+      // 交点: X + 中心点
+      octx.beginPath();
+      octx.moveTo(sx-10,sy-10);octx.lineTo(sx+10,sy+10);
+      octx.moveTo(sx+10,sy-10);octx.lineTo(sx-10,sy+10);
+      octx.stroke();
+      octx.beginPath();octx.arc(sx,sy,3,0,Math.PI*2);octx.fill();
+    } else if(snapPt.type==='end'){
+      // 端点: 正方形 + クロスヘア
+      octx.strokeRect(sx-7,sy-7,14,14);
+      octx.beginPath();
+      octx.moveTo(sx-12,sy);octx.lineTo(sx+12,sy);
+      octx.moveTo(sx,sy-12);octx.lineTo(sx,sy+12);
+      octx.stroke();
+    } else if(snapPt.type==='cen'){
+      // 中心: 円 + 内点 + クロスヘア
+      octx.beginPath();octx.arc(sx,sy,9,0,Math.PI*2);octx.stroke();
+      octx.beginPath();octx.arc(sx,sy,3,0,Math.PI*2);octx.fill();
+      octx.beginPath();
+      octx.moveTo(sx-13,sy);octx.lineTo(sx+13,sy);
+      octx.moveTo(sx,sy-13);octx.lineTo(sx,sy+13);
+      octx.stroke();
+    } else if(snapPt.type==='mid'){
+      // 中点: ひし形
+      octx.beginPath();
+      octx.moveTo(sx,sy-10);octx.lineTo(sx+10,sy);
+      octx.lineTo(sx,sy+10);octx.lineTo(sx-10,sy);
+      octx.closePath();octx.stroke();
+    } else {
+      octx.beginPath();octx.arc(sx,sy,8,0,Math.PI*2);octx.stroke();
+      octx.beginPath();
+      octx.moveTo(sx-11,sy);octx.lineTo(sx+11,sy);
+      octx.moveTo(sx,sy-11);octx.lineTo(sx,sy+11);
+      octx.stroke();
+    }
+    // ラベル
+    if(sc.lbl){
+      octx.font='bold 11px sans-serif';
+      const tw=octx.measureText(sc.lbl).width;
+      octx.fillStyle='rgba(0,0,0,0.72)';
+      octx.fillRect(sx+15,sy-19,tw+8,17);
+      octx.fillStyle=sc.col;
+      octx.textAlign='left';octx.textBaseline='bottom';
+      octx.fillText(sc.lbl,sx+19,sy-4);
+    }
+  }
+  // dxdyツールのP3選択中: 方向プレビュー（V0_13改善）
+  if((currentTool==='dxdy') && dimState.pts.length===2 && snapPt){
+    const p1_=dimState.pts[0], p2_=dimState.pts[1];
+    const midX=(p1_.x+p2_.x)/2, midY=(p1_.y+p2_.y)/2;
+    const horizOfs=Math.abs(snapPt.x-midX);
+    const vertOfs=Math.abs(snapPt.y-midY);
+
   }
   // Eraser
   if(eraserPos&&currentTool==='eraser'){
@@ -907,8 +491,998 @@ function drawOverlay(){
     octx.strokeStyle='rgba(255,100,100,0.7)';octx.lineWidth=2;
     octx.beginPath();octx.arc(sx,sy,ERASER_RADIUS_PX,0,Math.PI*2);octx.stroke();
   }
+  // ── 寸法プレビュー（点線でリアルタイム表示）────────────────────────────
+  if(dimState && dimState.pts && dimState.pts.length>=1){
+    const curPt = snapPt || currentCursorWorld;
+    if(curPt){
+      let prevDim = null;
+      try{
+        if(currentTool==='dxdy' && dimState.pts.length===2){
+          // P3 選択中: 完全な寸法プレビュー（ペン有無問わず）
+          const[p1,p2,p3]=[dimState.pts[0],dimState.pts[1],curPt];
+          const midX=(p1.x+p2.x)/2,midY=(p1.y+p2.y)/2;
+          const pType=Math.abs(p3.y-midY)>=Math.abs(p3.x-midX)?'dx':'dy';
+          prevDim=buildDim(p1,p2,p3,pType);
+        } else if(currentTool==='diag' && dimState.pts.length===2){
+          // P3 選択中: 斜め寸法P3プレビュー
+          const[p1,p2,p3]=[dimState.pts[0],dimState.pts[1],curPt];
+          prevDim=buildDim(p1,p2,p3,'diag');
+        } else if(currentTool==='diag' && dimState.pts.length===1){
+          // P2 選択中: 斜め寸法プレビュー
+          const[p1,p2]=[dimState.pts[0],curPt];
+          prevDim=buildDim(p1,p2,p2,'diag');
+        } else if(currentTool==='dxdy' && dimState.pts.length===1){
+          // P2 選択中: P1→カーソルの細線プレビュー
+          const[sx0_,sy0_]=w2s(dimState.pts[0].x,dimState.pts[0].y);
+          const[sx1_,sy1_]=w2s(curPt.x,curPt.y);
+          octx.save();
+          octx.strokeStyle='rgba(0,212,255,0.6)';
+          octx.lineWidth=1;
+          octx.setLineDash([4,3]);
+          octx.beginPath();octx.moveTo(sx0_,sy0_);octx.lineTo(sx1_,sy1_);octx.stroke();
+          octx.restore();
+        }
+      }catch(e){}
+      if(prevDim){
+        octx.save();
+        octx.strokeStyle='rgba(0,212,255,0.75)';
+        octx.fillStyle='rgba(0,212,255,0.85)';
+        octx.lineWidth=1.5;
+        octx.setLineDash([5,3]);
+        octx.lineCap='round';
+        for(const l of(prevDim.lines||[])){
+          const[sx1_,sy1_]=w2s(l.x1,l.y1);
+          const[sx2_,sy2_]=w2s(l.x2,l.y2);
+          octx.beginPath();octx.moveTo(sx1_,sy1_);octx.lineTo(sx2_,sy2_);octx.stroke();
+        }
+        octx.setLineDash([]);
+        // 矢印プレビュー（常時）
+        for(const a of(prevDim.arrows||[])){
+          const[sxa,sya]=w2s(a.x,a.y);
+          octx.save();octx.translate(sxa,sya);octx.rotate(a.angle);
+          octx.beginPath();octx.moveTo(0,0);octx.lineTo(-10,4);octx.lineTo(-10,-4);octx.closePath();octx.fill();octx.restore();
+        }
+        // 寸法値（常時表示・角度対応）
+        const txt = prevDim.text||'';
+        const ptx_ = prevDim.tx, pty_ = prevDim.ty;
+        if(txt && ptx_!=null && pty_!=null){
+          const[stx_,sty_]=w2s(ptx_,pty_);
+          octx.save();
+          octx.translate(stx_,sty_);
+          if(prevDim.tangle) octx.rotate(prevDim.tangle);
+          octx.font='bold 17px sans-serif';
+          octx.textAlign='center';
+          octx.textBaseline='middle';
+          const tw=octx.measureText(txt).width;
+          octx.fillStyle='rgba(0,20,40,0.65)';
+          octx.fillRect(-tw/2-3,-10,tw+6,20);
+          octx.fillStyle='rgba(0,212,255,0.85)';
+          octx.fillText(txt,0,0);
+          octx.restore();
+        }
+        octx.restore();
+      }
+    }
+  }
+  octx.restore();
 }
 
+// [measurement.js] drawDimEntity, lineIntersect, distToSeg, snapAt, buildDim, formatDim
+
+// =========================================================
+// PDF保存
+// =========================================================
+async function savePDF(){
+  const tmp=document.createElement('canvas');
+  tmp.width=cv.width;tmp.height=cv.height;
+  const tctx=tmp.getContext('2d');
+  tctx.drawImage(cv,0,0);tctx.drawImage(ov,0,0);
+  const jpeg=tmp.toDataURL('image/jpeg',0.92).split(',')[1];
+  const pdf=buildPDF(jpeg,tmp.width,tmp.height);
+  const fname=(currentFileName||'dxf_view').replace(/\.[^.]+$/,'')
+    +'_'+new Date().toISOString().slice(2,10).replace(/-/g,'')+'.pdf';
+  if(window.showSaveFilePicker){
+    try{
+      const fh=await showSaveFilePicker({suggestedName:fname,types:[{description:'PDF',accept:{'application/pdf':['.pdf']}}]});
+      const w=await fh.createWritable();await w.write(pdf);await w.close();return;
+    }catch(e){}
+  }
+  const blob=new Blob([pdf],{type:'application/pdf'});
+  const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=fname;a.click();
+}
+
+
+// =========================================================
+// ポインタ処理
+// =========================================================
+function getPos(e){const r=ov.getBoundingClientRect();return {x:e.clientX-r.left,y:e.clientY-r.top};}
+
+function handlePointerDown(sx,sy,isPenInput){
+  // DIMシステムがアクティブな場合は DIM の pointerup ハンドラに任せる
+  if(window.DIM&&window.DIM.active)return;
+  if(window.LP&&window.LP.active)return;
+  const[wx,wy]=s2w(sx,sy);
+  // 寸法ツール: ペン入力のみ（指は touchstart でパン処理済み）
+  if(currentTool==='dx'||currentTool==='dy'||currentTool==='dxdy'||currentTool==='diag'){
+    if(isPenInput){
+      snapPt=snapAt(wx,wy); // ペンダウン位置でスナップ初期化（touchmove不発火対策）
+      dimPendingDown=true;return;
+    }
+    const snap=snapAt(wx,wy);const pt=snap||{x:wx,y:wy};
+    dimState.pts.push(pt);
+    // ガイドメッセージ更新
+    if(currentTool==='dxdy'||currentTool==='diag'){
+      if(dimState.pts.length===1) showGuide('2点目を選択してください');
+      else if(dimState.pts.length===2) showGuide('寸法線の位置を指定してください');
+    }
+    const need=3; // diag も dxdy も 3ステップ（P1→P2→位置）
+    if(dimState.pts.length>=need){
+      const[p1,p2,p3]=dimState.pts;
+      snapshot();
+      let dimType=currentTool;
+      if(currentTool==='dxdy'&&dimState.pts.length>=2){
+        const p1_=dimState.pts[0], p2_=dimState.pts[1];
+        const p3_=dimState.pts[2]||p2_;
+        const midX=(p1_.x+p2_.x)/2, midY=(p1_.y+p2_.y)/2;
+        const horizOfs=Math.abs(p3_.x-midX);
+        const vertOfs=Math.abs(p3_.y-midY);
+        dimType = vertOfs >= horizOfs ? 'dx' : 'dy';
+      }
+      dims.push(buildDim(p1,p2,p3||p2,dimType));
+      dimState={pts:[]};
+      hideGuide();
+      showGuide('寸法を追加しました ↩ で取消', 2000);
+    }
+    scheduleOverlay();return;
+  }
+  // 消しゴム
+  if(currentTool==='eraser'){
+    snapshot();eraserPos={x:wx,y:wy};eraseAt(wx,wy);scheduleOverlay();return;
+  }
+  // スケッチ: ペンは常に描画（マウス時はsketchツール時のみ）
+  if(isPenInput||currentTool==='sketch'){
+    sketchPts=[{x:wx,y:wy}];sketching=true;scheduleOverlay();return;
+  }
+  // 画像選択
+  if(currentTool==='select'){
+    selectedImage=null;
+    for(const img of images){
+      const[isx,isy]=w2s(img.wx,img.wy);
+      if(Math.abs(sx-isx-img.ww*scale/2)<20&&Math.abs(sy-isy-img.wh*scale/2)<20){
+        selectedImage=img;dragImageStart={sx,sy,iwx:img.wx,iwy:img.wy};scheduleOverlay();return;
+      }
+    }
+  }
+  // 指でパン
+  if(!isPenInput){panning=true;}
+}
+
+function handlePointerMove(sx,sy,isPenInput){
+  // DIMシステムがアクティブな場合は DIM の pointermove ハンドラに任せる
+  if(window.DIM&&window.DIM.active)return;
+  if(window.LP&&window.LP.active)return;
+  const[wx,wy]=s2w(sx,sy);
+  currentCursorWorld={x:wx,y:wy}; // 寸法プレビュー用カーソル世界座標を更新
+  // 寸法ツール: ペン・指どちらでもスナップ更新
+  if(currentTool==='dx'||currentTool==='dy'||currentTool==='dxdy'||currentTool==='diag'){
+    snapPt=snapAt(wx,wy);scheduleOverlay();return;
+  }
+  snapPt=null;
+  // 消しゴム
+  if(currentTool==='eraser'){
+    eraserPos={x:wx,y:wy};if(mouseDown)eraseAt(wx,wy);scheduleOverlay();return;
+  }
+  // スケッチ描画
+  if(isPenInput||currentTool==='sketch'){
+    if(sketching){sketchPts.push({x:wx,y:wy});scheduleOverlay();}return;
+  }
+  // パン
+  if(panning){tx+=sx-lastMX;ty+=sy-lastMY;scheduleDraw();}
+  if(selectedImage&&dragImageStart){
+    const[nwx,nwy]=s2w(sx,sy);const[owx,owy]=s2w(dragImageStart.sx,dragImageStart.sy);
+    selectedImage.wx=dragImageStart.iwx+(nwx-owx);selectedImage.wy=dragImageStart.iwy+(nwy-owy);
+    scheduleOverlay();
+  }
+}
+
+function handlePointerUp(sx,sy,isPenInput){
+  // DIMシステムがアクティブな場合は DIM の pointerup ハンドラに任せる
+  if(window.DIM&&window.DIM.active)return;
+  if(window.LP&&window.LP.active)return;
+  if(dimPendingDown&&isPenInput){
+    dimPendingDown=false;
+    if(currentTool==='dx'||currentTool==='dy'||currentTool==='dxdy'||currentTool==='diag'){
+      const[wx2,wy2]=s2w(sx,sy);
+      const pt=snapPt||{x:wx2,y:wy2};
+      dimState.pts.push(pt);
+      // ガイドメッセージ更新
+      if(currentTool==='dxdy'||currentTool==='diag'){
+        if(dimState.pts.length===1) showGuide('2点目を選択してください');
+        else if(dimState.pts.length===2) showGuide('寸法線の位置を指定してください');
+      }
+      const need=3; // diag も dxdy も 3ステップ（P1→P2→位置）
+      if(dimState.pts.length>=need){
+        const[p1,p2,p3]=dimState.pts;
+        snapshot();
+        let dimType=currentTool;
+        if(currentTool==='dxdy'&&dimState.pts.length>=2){
+          const p1_=dimState.pts[0], p2_=dimState.pts[1];
+          const p3_=dimState.pts[2]||p2_;
+          const midX=(p1_.x+p2_.x)/2, midY=(p1_.y+p2_.y)/2;
+          const horizOfs=Math.abs(p3_.x-midX);
+          const vertOfs=Math.abs(p3_.y-midY);
+          dimType = vertOfs >= horizOfs ? 'dx' : 'dy';
+        }
+        dims.push(buildDim(p1,p2,p3||p2,dimType));
+        dimState={pts:[]};
+        hideGuide();
+        showGuide('寸法を追加しました ↩ で取消', 2000);
+      }
+      scheduleOverlay();return;
+    }
+  }
+  if(currentTool==='eraser'){eraserPos=null;scheduleOverlay();return;}
+  if(isPenInput||currentTool==='sketch'){
+    if(sketching&&sketchPts.length>1){
+      snapshot();
+      strokes.push({pts:[...sketchPts],color:{...currentColor},lw:currentLW/scale});
+      sketching=false;sketchPts=[];scheduleOverlay();scheduleSave();
+    }return;
+  }
+  panning=false;dragImageStart=null;selectedImage=null;
+}
+
+function eraseAt(wx,wy){
+  const r=ERASER_RADIUS_PX/scale;
+  strokes=strokes.filter(s=>!s.pts.some(p=>Math.hypot(p.x-wx,p.y-wy)<r));
+  dims=dims.filter(d=>Math.hypot(d.tx-wx,d.ty-wy)>=r);
+}
+
+// =========================================================
+// イベントリスナー
+// =========================================================
+// マウス
+ov.addEventListener('mousedown',e=>{
+  if(e.button!==0)return;
+  mouseDown=true;const p=getPos(e);lastMX=p.x;lastMY=p.y;
+  if(window.DIM&&window.DIM.active){
+    window.DIM.handleDown(p.x,p.y);
+  } else if(window.LP&&window.LP.active){
+    window.LP.handleDown(p.x,p.y);
+  } else { handlePointerDown(p.x,p.y,false); }
+});
+window.addEventListener('mousemove',e=>{
+  const p=getPos(e);
+  if(window.DIM&&window.DIM.active){
+    window.DIM.handleMove(p.x,p.y); // mouseDown不要: ホバー中も_hoverPos更新
+  } else if(window.LP&&window.LP.active){
+    window.LP.handleMove(p.x,p.y);
+  } else { handlePointerMove(p.x,p.y,false); }
+  lastMX=p.x;lastMY=p.y;
+});
+window.addEventListener('mouseup',e=>{
+  if(!mouseDown)return;mouseDown=false;
+  const p=getPos(e);
+  if(window.DIM&&window.DIM.active){
+    window.DIM.handleUp(p.x,p.y);
+  } else if(window.LP&&window.LP.active){
+    window.LP.handleUp(p.x,p.y);
+  } else { handlePointerUp(p.x,p.y,false); }
+});
+ov.addEventListener('wheel',e=>{
+  e.preventDefault();
+  const p=getPos(e);zoomAt(p.x,p.y,e.deltaY<0?1.15:1/1.15);scheduleDraw();
+},{passive:false});
+
+// タッチ (ペン/指 完全分離設計)
+ov.addEventListener('touchstart',e=>{
+  e.preventDefault();
+  const r=ov.getBoundingClientRect();
+  const all=Array.from(e.touches);
+  const styli=all.filter(t=>t.touchType==='stylus');
+  const fingers=all.filter(t=>t.touchType!=='stylus');
+  if(styli.length>0){
+    // Apple Pencil: ペン入力を優先、指は無視（パームリジェクション）
+    if(!isPen||!mouseDown){
+      const t=styli[0];
+      const sx=t.clientX-r.left,sy=t.clientY-r.top;
+      isPen=true;mouseDown=true;lastMX=sx;lastMY=sy;
+      panning=false;
+      if(window.DIM&&window.DIM.active){
+        window.DIM.handleDown(sx,sy);
+        console.log('[DIM] touchstart(pencil) → handleDown');
+      } else if(window.LP&&window.LP.active){
+        window.LP.handleDown(sx,sy);
+      } else { handlePointerDown(sx,sy,true); }
+    }
+  } else if(fingers.length>=2){
+    // 2本指: ピンチズーム+パン
+    if(sketching){sketching=false;sketchPts=[];}
+    mouseDown=false;panning=false;
+    const t0=fingers[0],t1=fingers[1];
+    const x0=t0.clientX-r.left,y0=t0.clientY-r.top;
+    const x1=t1.clientX-r.left,y1=t1.clientY-r.top;
+    pinchDist=Math.hypot(x1-x0,y1-y0);
+    pinchMid={x:(x0+x1)/2,y:(y0+y1)/2};
+  } else if(fingers.length===1){
+    // 指1本: パンのみ（描画しない）
+    if(sketching){sketching=false;sketchPts=[];}
+    const t=fingers[0];
+    const sx=t.clientX-r.left,sy=t.clientY-r.top;
+    isPen=false;mouseDown=true;lastMX=sx;lastMY=sy;
+    panning=true;
+  }
+},{passive:false});
+
+ov.addEventListener('touchmove',e=>{
+  e.preventDefault();
+  const r=ov.getBoundingClientRect();
+  const all=Array.from(e.touches);
+  const styli=all.filter(t=>t.touchType==='stylus');
+  const fingers=all.filter(t=>t.touchType!=='stylus');
+  if(styli.length>0&&mouseDown&&isPen){
+    // Apple Pencil移動: ツール操作
+    const t=styli[0];
+    const sx=t.clientX-r.left,sy=t.clientY-r.top;
+    if(window.DIM&&window.DIM.active){
+      window.DIM.handleMove(sx,sy);
+    } else if(window.LP&&window.LP.active){
+      window.LP.handleMove(sx,sy);
+    } else { handlePointerMove(sx,sy,true); }
+    lastMX=sx;lastMY=sy;
+  } else if(fingers.length>=2&&pinchDist!==null){
+    // 2本指: 正確なパン+ピンチ（世界座標ピボット）
+    const t0=fingers[0],t1=fingers[1];
+    const x0=t0.clientX-r.left,y0=t0.clientY-r.top;
+    const x1=t1.clientX-r.left,y1=t1.clientY-r.top;
+    const dist=Math.hypot(x1-x0,y1-y0);
+    const mid={x:(x0+x1)/2,y:(y0+y1)/2};
+    // 旧中点の世界座標を新しい中点スクリーン位置に移動（パン+ズーム統合）
+    const[wx,wy]=s2w(pinchMid.x,pinchMid.y);
+    if(pinchDist>5){
+      const f=dist/pinchDist;
+      if(f>0.5&&f<2.0) scale*=f;
+    }
+    tx=mid.x-wx*scale;ty=mid.y+wy*scale;
+    pinchDist=dist;pinchMid=mid;scheduleDraw();
+  } else if(fingers.length===1&&mouseDown&&panning){
+    // 1本指パン
+    const t=fingers[0];
+    const sx=t.clientX-r.left,sy=t.clientY-r.top;
+    tx+=sx-lastMX;ty+=sy-lastMY;scheduleDraw();
+    lastMX=sx;lastMY=sy;
+  }
+},{passive:false});
+
+ov.addEventListener('touchend',e=>{
+  e.preventDefault();
+  const r=ov.getBoundingClientRect();
+  const remaining=Array.from(e.touches);
+  const changed=Array.from(e.changedTouches);
+  const remFing=remaining.filter(t=>t.touchType!=='stylus');
+  const liftedStylus=changed.filter(t=>t.touchType==='stylus');
+  // Apple Pencilが離れた
+  if(liftedStylus.length>0&&isPen&&mouseDown){
+    if(window.DIM&&window.DIM.active){
+      window.DIM.handleUp(lastMX,lastMY);
+      console.log('[DIM] touchend(pencil) → handleUp');
+    } else if(window.LP&&window.LP.active){
+      window.LP.handleUp(lastMX,lastMY);
+    } else { handlePointerUp(lastMX,lastMY,true); }
+    mouseDown=false;isPen=false;
+    if(remFing.length>=2){
+      const t0=remFing[0],t1=remFing[1];
+      const x0=t0.clientX-r.left,y0=t0.clientY-r.top;
+      const x1=t1.clientX-r.left,y1=t1.clientY-r.top;
+      pinchDist=Math.hypot(x1-x0,y1-y0);
+      pinchMid={x:(x0+x1)/2,y:(y0+y1)/2};
+    } else if(remFing.length===1){
+      const t=remFing[0];
+      const sx=t.clientX-r.left,sy=t.clientY-r.top;
+      mouseDown=true;lastMX=sx;lastMY=sy;panning=true;
+    }
+    return;
+  }
+  // 全タッチ終了
+  if(remaining.length===0){
+    if(!isPen){panning=false;mouseDown=false;}
+    pinchDist=null;pinchMid=null;return;
+  }
+  // 2本指→1本指への移行
+  if(remFing.length===1&&pinchDist!==null&&!isPen){
+    pinchDist=null;pinchMid=null;
+    const t=remFing[0];
+    const sx=t.clientX-r.left,sy=t.clientY-r.top;
+    mouseDown=true;lastMX=sx;lastMY=sy;panning=true;
+  }
+},{passive:false});
+
+// ポインタ予測イベント: V0_13で廃止（描画品質改善のため）
+// getPredictedEventsはスケッチ追従を悪化させるため削除。将来の参照用としてコメントで残す。
+// ov.addEventListener('pointermove',e=>{ ... getPredictedEvents ... });
+
+// ファイル
+const fileInput=document.getElementById('file');
+document.getElementById('openFileBtnMain').addEventListener('click',()=>fileInput.click());
+fileInput.addEventListener('change',async e=>{
+  const f=e.target.files[0];if(!f)return;
+  currentFileName=f.name;
+  const buf=await f.arrayBuffer();
+  doc=null;pdfDoc=null;pdfImage=null;
+  document.getElementById('pdfPageCtrl').style.display='none';
+  if(f.name.toLowerCase().endsWith('.pdf')){
+    await loadPDF(buf);{const nd2=document.getElementById('noDrawingMsg');if(nd2)nd2.style.display='none';}
+    saveFile(buf,f.name);scheduleSave();updateFileNameDisplay();
+    document.body.classList.remove('settings-open');
+  } else {
+    try{
+      doc=parseDXF(buf);
+      hiddenLayers.clear();strokes=[];dims=[];images=[];savedViews=[null,null,null];[0,1,2].forEach(i=>updateViewmemoState(i));
+      buildSnapCache();checkPerfMode();buildLayerModal();detectScale();fit();scheduleDraw();showInfo();{const _nd=document.getElementById('noDrawingMsg');if(_nd)_nd.style.display='none';}{const _nd=document.getElementById('noDrawingMsg');if(_nd)_nd.style.display='none';}
+      saveFile(buf,f.name);scheduleSave();updateFileNameDisplay();
+      document.body.classList.remove('settings-open');
+    }catch(err){alert('ファイルを開けません: '+err.message);}
+  }
+  e.target.value='';
+});
+
+// サイドバー
+document.getElementById('settingsBtn').addEventListener('click',()=>document.body.classList.add('settings-open'));
+document.getElementById('settingsClose').addEventListener('click',()=>document.body.classList.remove('settings-open'));
+document.getElementById('settingsOverlay').addEventListener('click',()=>document.body.classList.remove('settings-open'));
+document.getElementById('layerBtn').addEventListener('click',()=>document.getElementById('layerModal').classList.add('open'));
+document.getElementById('layerClose').addEventListener('click',()=>document.getElementById('layerModal').classList.remove('open'));
+document.getElementById('layerModal').addEventListener('click',e=>{if(e.target===document.getElementById('layerModal'))document.getElementById('layerModal').classList.remove('open');});
+document.getElementById('bwBlack').addEventListener('click',()=>{
+  bwMode=false;
+  document.getElementById('bwBlack').classList.add('active');
+  document.getElementById('bwWhite').classList.remove('active');
+  scheduleDraw();scheduleSave();
+});
+document.getElementById('bwWhite').addEventListener('click',()=>{
+  bwMode=true;
+  document.getElementById('bwWhite').classList.add('active');
+  document.getElementById('bwBlack').classList.remove('active');
+  scheduleDraw();scheduleSave();
+});
+document.getElementById('scaleDenom').addEventListener('change',e=>{scaleDenom=parseFloat(e.target.value)||1;scheduleSave();});
+
+// PDFページ
+document.getElementById('prevPage').addEventListener('click',async()=>{
+  if(!pdfDoc||pdfPageNum<=1)return;
+  pdfPageNum--;document.getElementById('pageInfo').textContent=`${pdfPageNum}/${pdfDoc.numPages}`;
+  await renderPdfPage(pdfPageNum);
+});
+document.getElementById('nextPage').addEventListener('click',async()=>{
+  if(!pdfDoc||pdfPageNum>=pdfDoc.numPages)return;
+  pdfPageNum++;document.getElementById('pageInfo').textContent=`${pdfPageNum}/${pdfDoc.numPages}`;
+  await renderPdfPage(pdfPageNum);
+});
+
+// ツール
+document.querySelectorAll('.tool-btn').forEach(btn=>{
+  btn.addEventListener('click',()=>{
+    document.querySelectorAll('.tool-btn').forEach(b=>b.classList.remove('active'));
+    btn.classList.add('active');currentTool=btn.dataset.tool;
+    dimState={pts:[]};dimPendingDown=false;sketching=false;sketchPts=[];snapPt=null;scheduleOverlay();
+    console.log('[Tool] switched to:', currentTool, 'DIM.active=', window.DIM&&window.DIM.active);
+    // ガイドメッセージ
+    const guideMap={
+      'sketch':'Apple Pencilまたは指でスケッチ',
+      'eraser':'消去したい線をなぞってください',
+      'dxdy':'1点目を選択してください',
+      'diag':'1点目を選択してください',
+      'circDim':'円の円周にペンを近づける→離して確定→位置を指定',
+      'radDim':'円または円弧を選択→離して確定→半径線の位置を指定'
+    };
+    if(currentTool==='sketch'||currentTool==='eraser'){
+      showGuide(guideMap[currentTool]||'', 2000);
+    } else if(guideMap[currentTool]){
+      showGuide(guideMap[currentTool]);
+    } else {
+      hideGuide();
+    }
+  });
+});
+document.querySelectorAll('.color-btn').forEach(btn=>{
+  btn.addEventListener('click',()=>{
+    document.querySelectorAll('.color-btn').forEach(b=>b.classList.remove('active'));
+    btn.classList.add('active');
+    const[r,g,b]=btn.dataset.color.split(',').map(Number);currentColor={r,g,b};const dot=document.getElementById('colorDot');if(dot)dot.style.background=btn.style.background;document.getElementById('colorOverlay').classList.remove('open');
+  });
+});
+document.querySelectorAll('.lw-btn').forEach(btn=>{
+  btn.addEventListener('click',()=>{
+    document.querySelectorAll('.lw-btn').forEach(b=>b.classList.remove('active'));
+    btn.classList.add('active');currentLW=parseFloat(btn.dataset.lw);
+  });
+});
+
+// Undo/Redo スナップショット
+function snapshot(){
+  history.push({
+    strokes:strokes.map(s=>({...s,pts:[...s.pts]})),
+    dims:[...dims]
+  });
+  if(history.length>MAX_HISTORY)history.shift();
+  redoStack=[];
+  updateUndoRedo();
+}
+function undo(){
+  if(!history.length)return;
+  redoStack.push({strokes:strokes.map(s=>({...s,pts:[...s.pts]})),dims:[...dims]});
+  const st=history.pop();strokes=st.strokes;dims=st.dims;
+  scheduleOverlay();updateUndoRedo();scheduleSave();
+}
+function redo(){
+  if(!redoStack.length)return;
+  history.push({strokes:strokes.map(s=>({...s,pts:[...s.pts]})),dims:[...dims]});
+  const st=redoStack.pop();strokes=st.strokes;dims=st.dims;
+  scheduleOverlay();updateUndoRedo();scheduleSave();
+}
+function updateUndoRedo(){
+  const ub=document.getElementById('undoBtn');
+  const rb=document.getElementById('redoBtn');
+  if(ub)ub.style.opacity=history.length?'1':'0.35';
+  if(rb)rb.style.opacity=redoStack.length?'1':'0.35';
+}
+document.getElementById('undoBtn').addEventListener('click',undo);
+document.getElementById('redoBtn').addEventListener('click',redo);
+document.getElementById('clearDimsBtn').addEventListener('click',()=>{
+  if(!dims.length)return;
+  if(confirm('すべての寸法を削除しますか？')){
+    snapshot();dims=[];scheduleOverlay();scheduleSave();
+    showGuide('寸法をすべて消去しました ↩ で取消', 2000);
+  }
+});
+document.getElementById('clearBtn').addEventListener('click',()=>{
+  if(confirm('全てのスケッチと寸法を消去しますか？')){snapshot();dims=[];strokes=[];scheduleOverlay();scheduleSave();}
+});
+document.getElementById('savePDFBtn').addEventListener('click', async ()=>{
+  const btn = document.getElementById('savePDFBtn');
+  btn.disabled = true;
+  showGuide('PDFを生成中...');
+  try{
+    // ── 1. バウンディングボックス計算 ────────────────────
+    let mnX=Infinity,mnY=Infinity,mxX=-Infinity,mxY=-Infinity;
+    function upd(x,y){if(!isFinite(x)||!isFinite(y))return;mnX=Math.min(mnX,x);mxX=Math.max(mxX,x);mnY=Math.min(mnY,y);mxY=Math.max(mxY,y);}
+    const allEnts=[...(doc?.sen||[]),...(doc?.enko||[]),...(doc?.ten||[]),...(doc?.moji||[]),...(doc?.solid||[])];
+    for(const e of allEnts){
+      if(hiddenLayers.has(e.layer))continue;
+      if(e.x1!=null){upd(e.x1,e.y1);upd(e.x2!=null?e.x2:e.x1,e.y2!=null?e.y2:e.y1);}
+      if(e.cx!=null){const r=e.r||Math.max(e.rx||0,e.ry||0)||0;upd(e.cx-r,e.cy-r);upd(e.cx+r,e.cy+r);}
+      if(e.pts){for(const p of e.pts)upd(p.x,p.y);}
+      if(e.x!=null&&e.y!=null)upd(e.x,e.y);
+    }
+    if(pdfImage){upd(pdfImage.wx,pdfImage.wy);upd(pdfImage.wx+pdfImage.ww,pdfImage.wy-pdfImage.wh);}
+    for(const s of strokes)for(const p of s.pts)upd(p.x,p.y);
+    for(const d of dims){
+      for(const l of(d.lines||[]))upd(l.x1,l.y1),upd(l.x2,l.y2);
+      if(d.tx!=null&&d.ty!=null)upd(d.tx,d.ty);
+    }
+    if(!isFinite(mnX)){showGuide('描画データがありません',2000);return;}
+
+    // ── 2. キャンバスサイズ決定（約450DPI相当）───────────────
+    const PAD=0.03;
+    const eW=mxX-mnX, eH=mxY-mnY;
+    const extMinX=mnX-eW*PAD, extMinY=mnY-eH*PAD;
+    const extW=eW*(1+2*PAD), extH=eH*(1+2*PAD);
+
+    // 長辺を5000pxに（約450DPI相当）
+    const LONG_PX=5000;
+    const aspect=extW/extH;
+    const CW=aspect>=1?LONG_PX:Math.round(LONG_PX*aspect);
+    const CH=aspect>=1?Math.round(LONG_PX/aspect):LONG_PX;
+
+    // PDF ページサイズ（長辺=297mm → ~427DPI）
+    const PDF_LONG_MM=297;
+    const pageMM_W=aspect>=1?PDF_LONG_MM:Math.round(PDF_LONG_MM*aspect);
+    const pageMM_H=aspect>=1?Math.round(PDF_LONG_MM/aspect):PDF_LONG_MM;
+
+    // ── 3. グローバル状態を退避してPDF用に上書き ──────────
+    const sv={tx,ty,scale};
+    const cvEl=document.getElementById('cv');
+    const ovEl=document.getElementById('ov');
+    const sv_cw=cvEl.width,sv_ch=cvEl.height;
+    const sv_ow=ovEl.width,sv_oh=ovEl.height;
+
+    const pdfScale=Math.min(CW/extW,CH/extH);
+    tx=-extMinX*pdfScale;
+    ty=CH+extMinY*pdfScale;  // Y反転: w2s(wx,wy)=[wx*scale+tx, -wy*scale+ty]
+    scale=pdfScale;
+
+    // draw()はctx.scale(dpr,dpr)を内部で呼ぶため、PDF用は物理=CSSに統一するためdprを1に
+    const dprSave=window.devicePixelRatio||1;
+    Object.defineProperty(window,'devicePixelRatio',{get:()=>1,configurable:true});
+
+    cvEl.width=CW; cvEl.height=CH;
+    ovEl.width=CW; ovEl.height=CH;
+
+    // ── 4. 描画実行 ────────────────────────────────────
+    if(typeof draw==='function') draw();
+    if(typeof drawOverlay==='function') drawOverlay();
+
+    // ── 5. 合成 ────────────────────────────────────────
+    const comp=document.createElement('canvas');
+    comp.width=CW; comp.height=CH;
+    const cctx=comp.getContext('2d');
+    cctx.fillStyle=bwMode?'#fff':'#1e2430';
+    cctx.fillRect(0,0,CW,CH);
+    cctx.drawImage(cvEl,0,0);
+    cctx.drawImage(ovEl,0,0);
+
+    // ── 6. グローバル状態を復元 ────────────────────────
+    Object.defineProperty(window,'devicePixelRatio',{get:()=>dprSave,configurable:true});
+    tx=sv.tx; ty=sv.ty; scale=sv.scale;
+    cvEl.width=sv_cw; cvEl.height=sv_ch;
+    ovEl.width=sv_ow; ovEl.height=sv_oh;
+    if(typeof scheduleDraw==='function')scheduleDraw();
+    if(typeof scheduleOverlay==='function')scheduleOverlay();
+
+    // ── 7. jsPDF でカスタムサイズ PDF 生成 ──────────────
+    if(typeof window.jspdf==='undefined'){
+      // フォールバック: PNG として保存
+      const url=URL.createObjectURL(await new Promise(r=>comp.toBlob(r,'image/png')));
+      const a=document.createElement('a');
+      a.href=url; a.download=(currentFileName||'drawing').replace(/\.[^.]+$/,'')+`_${new Date().toISOString().slice(0,10)}.png`;
+      document.body.appendChild(a);a.click();document.body.removeChild(a);
+      setTimeout(()=>URL.revokeObjectURL(url),2000);
+      showGuide('画像として保存しました',2000); return;
+    }
+    const {jsPDF}=window.jspdf;
+    const orient=pageMM_W>=pageMM_H?'l':'p';
+    const pdf=new jsPDF({orientation:orient,unit:'mm',format:[pageMM_W,pageMM_H],compress:true});
+    const imgData=comp.toDataURL('image/jpeg',0.96);
+    pdf.addImage(imgData,'JPEG',0,0,pageMM_W,pageMM_H,undefined,'FAST');
+    const ts=new Date().toISOString().slice(0,10);
+    const fname=(currentFileName||'drawing').replace(/\.[^.]+$/,'')+`_${ts}.pdf`;
+    pdf.save(fname);
+    showGuide('PDFを保存しました',2000);
+
+  }catch(err){
+    console.error('PDF export error:',err);
+    showGuide('PDF出力に失敗しました: '+err.message,3000);
+  }finally{
+    document.getElementById('savePDFBtn').disabled=false;
+  }
+});
+
+// スクリーンショット保存ボタン (V0_13改善)
+document.getElementById('screenshotBtn').addEventListener('click', async ()=>{
+  const btn = document.getElementById('screenshotBtn');
+  btn.disabled = true;
+  showGuide('スクリーンショットを保存中...');
+  try{
+    const dpr = Math.min(window.devicePixelRatio || 1, 3);
+    const scale = Math.max(4, dpr * 2);  // 約2倍の解像度
+
+    let imageBlob;
+
+    if(typeof html2canvas !== 'undefined'){
+      // html2canvas でアプリ全体（ヘッダー含む）をキャプチャ
+      const captureCanvas = await html2canvas(document.body, {
+        scale: scale,
+        useCORS: true,
+        allowTaint: true,
+        backgroundColor: '#0b0f16',
+        logging: false,
+        imageTimeout: 0
+      });
+      imageBlob = await new Promise(res => captureCanvas.toBlob(res, 'image/png'));
+    } else {
+      // フォールバック: cv + ov の合成（ヘッダーなし）
+      const cv = document.getElementById('cv');
+      const ov = document.getElementById('ov');
+      const W = cv.width, H = cv.height;
+      const comp = document.createElement('canvas');
+      comp.width = W * scale; comp.height = H * scale;
+      const ctx2 = comp.getContext('2d');
+      ctx2.scale(scale, scale);
+      ctx2.fillStyle = '#0b0f16';
+      ctx2.fillRect(0, 0, W, H);
+      ctx2.drawImage(cv, 0, 0);
+      ctx2.drawImage(ov, 0, 0);
+      imageBlob = await new Promise(res => comp.toBlob(res, 'image/png'));
+    }
+
+    const ts = new Date().toISOString().replace(/[:.]/g,'-').slice(0,19);
+    const baseName = (currentFileName||'screenshot').replace(/\.[^.]+$/,'');
+    const fileName = `${baseName}_${ts}.png`;
+    const file = new File([imageBlob], fileName, {type:'image/png'});
+
+    // 保存先: Web Share API（iOS共有ダイアログ）→ <a download>
+    let shared = false;
+    if(navigator.share && typeof navigator.canShare === 'function' && navigator.canShare({files:[file]})){
+      try{
+        await navigator.share({files:[file], title:fileName});
+        shared = true;
+      }catch(shareErr){
+        if(shareErr.name === 'AbortError'){ return; } // ユーザーキャンセル→何もしない
+        // Share失敗 → downloadにフォールバック
+      }
+    }
+    if(!shared){
+      const url = URL.createObjectURL(imageBlob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = fileName;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      setTimeout(()=>URL.revokeObjectURL(url), 2000);
+    }
+    showGuide('保存しました', 2000);
+  }catch(err){
+    if(err.name !== 'AbortError'){
+      console.error('Screenshot error:', err);
+      hideGuide();
+    } else {
+      hideGuide();
+    }
+  }finally{
+    btn.disabled = false;
+  }
+});
+document.getElementById('rangeAreaPDFBtn').addEventListener('click',savePDF);
+document.getElementById('rangeAreaPDFBtn').addEventListener('click',savePDF);
+document.getElementById('fitBtn').addEventListener('click',()=>{fit();scheduleDraw();});
+document.getElementById('fitBtnTb').addEventListener('click',()=>{fit();scheduleDraw();});
+
+// =========================================================
+// DXF書き出し（書き込みストローク → LWPOLYLINE）
+// =========================================================
+function rgbToAci(r,g,b){
+  // 主要ACI色に近似マッピング
+  const aci=[
+    {i:1,r:255,g:0,b:0},{i:2,r:255,g:255,b:0},{i:3,r:0,g:255,b:0},
+    {i:4,r:0,g:255,b:255},{i:5,r:0,g:0,b:255},{i:6,r:255,g:0,b:255},
+    {i:7,r:255,g:255,b:255},{i:30,r:255,g:165,b:0},{i:40,r:255,g:200,b:100}
+  ];
+  let best=7,bestD=Infinity;
+  for(const c of aci){
+    const d=Math.hypot(r-c.r,g-c.g,b-c.b);
+    if(d<bestD){bestD=d;best=c.i;}
+  }
+  return best;
+}
+
+function exportSketchDxf(){
+  if(!strokes||strokes.length===0){showGuide('書き込みがありません',1500);return;}
+  const lines=[];
+  lines.push('0','SECTION','2','HEADER',
+    '9','$ACADVER','1','AC1015',
+    '9','$INSUNITS','70','4',
+    '0','ENDSEC',
+    '0','SECTION','2','ENTITIES');
+  for(const s of strokes){
+    if(!s.pts||s.pts.length<2) continue;
+    const aci=rgbToAci(s.color.r,s.color.g,s.color.b);
+    const lw=Math.max(0,Math.round((s.lw||0)*100)); // mm→1/100mm
+    lines.push('0','LWPOLYLINE',
+      '8','SKETCH',       // レイヤー名
+      '62',String(aci),   // 色
+      '43',String(s.lw||0), // 一定幅
+      '90',String(s.pts.length),
+      '70','0');          // 開いたポリライン
+    for(const p of s.pts){
+      lines.push('10',String(p.x),'20',String(p.y));
+    }
+  }
+  lines.push('0','ENDSEC','0','EOF');
+  const content=lines.join('\n');
+  const blob=new Blob([content],{type:'application/dxf'});
+  const baseName=(currentFileName||'sketch').replace(/\.[^.]+$/,'');
+  const ts=new Date().toISOString().replace(/[:.]/g,'-').slice(0,16);
+  const fileName=`${baseName}_sketch_${ts}.dxf`;
+  const file=new File([blob],fileName,{type:'application/dxf'});
+  // iOS: Web Share → fallback download
+  if(navigator.share&&typeof navigator.canShare==='function'&&navigator.canShare({files:[file]})){
+    navigator.share({files:[file],title:fileName}).catch(err=>{
+      if(err.name==='AbortError') return;
+      _dxfFallbackDownload(blob,fileName);
+    });
+  } else {
+    _dxfFallbackDownload(blob,fileName);
+  }
+  showGuide('DXF書き出し完了',2000);
+}
+function _dxfFallbackDownload(blob,fileName){
+  const url=URL.createObjectURL(blob);
+  const a=document.createElement('a');
+  a.href=url;a.download=fileName;
+  document.body.appendChild(a);a.click();
+  document.body.removeChild(a);
+  setTimeout(()=>URL.revokeObjectURL(url),2000);
+}
+document.getElementById('exportDxfBtn').addEventListener('click',exportSketchDxf);
+
+
+// 表示記憶
+function updateViewmemoState(i){
+  const mb=document.querySelector('.mem-btn[data-vi="'+i+'"]');
+  const sb=document.querySelector('.show-btn[data-vs="'+i+'"]');
+  if(mb) mb.classList.toggle('vm-saved',!!savedViews[i]);
+  if(sb) sb.classList.toggle('vm-saved',!!savedViews[i]);
+}
+document.querySelectorAll('.mem-btn').forEach(btn=>{
+  btn.addEventListener('click',()=>{
+    const i=parseInt(btn.dataset.vi);
+    if(!savedViews[i]){
+      // 未記憶 → 現在位置を記憶
+      savedViews[i]={tx,ty,scale};
+      updateViewmemoState(i);scheduleSave();
+      btn.style.transform='scale(.88)';setTimeout(()=>{btn.style.transform='';},180);
+      showGuide('記憶'+(i+1)+'に保存しました',1500);
+    } else {
+      // 記憶済み → 即メニュー（移動・上書き・リセット）
+      _showMemMenu(i,btn);
+    }
+  });
+  // 長押し廃止（メニューに統合）
+  let _pressTimer=null;
+  btn.addEventListener('pointerdown',()=>{ _pressTimer=setTimeout(()=>{_pressTimer=null;},600); });
+  btn.addEventListener('pointerup',()=>{clearTimeout(_pressTimer);_pressTimer=null;});
+  btn.addEventListener('pointercancel',()=>{clearTimeout(_pressTimer);_pressTimer=null;});
+  btn.addEventListener('pointermove',()=>{clearTimeout(_pressTimer);_pressTimer=null;});
+});
+function _showMemMenu(idx,anchorBtn){
+  var existing=document.getElementById('_memMenu');
+  if(existing){existing.remove();return;}
+  var menu=document.createElement('div');
+  menu.id='_memMenu';
+  menu.style.cssText='position:fixed;z-index:9999;background:#1e3a5f;border:2px solid #4a9eff;border-radius:12px;padding:16px;display:flex;flex-direction:column;gap:10px;min-width:180px;box-shadow:0 4px 20px rgba(0,0,0,.7);';
+  var r=anchorBtn.getBoundingClientRect();
+  menu.style.top=(r.bottom+6)+'px';
+  menu.style.left=Math.max(4,r.left-60)+'px';
+  menu.innerHTML='<div style="color:#aac8e8;font-size:12px;font-weight:bold;text-align:center;margin-bottom:4px;">記憶'+(idx+1)+'</div>'
+    +'<button id="_memOvr" style="background:#1a7a3a;color:#fff;border:none;border-radius:8px;padding:10px;font-size:13px;cursor:pointer;">上書き保存</button>'
+    +'<button id="_memRst" style="background:#8B0000;color:#fff;border:none;border-radius:8px;padding:10px;font-size:13px;cursor:pointer;">記憶リセット</button>'
+    +'<button id="_memCnl" style="background:#333;color:#aaa;border:none;border-radius:8px;padding:8px;font-size:12px;cursor:pointer;">キャンセル</button>';
+  document.body.appendChild(menu);
+  function closeMenu(){if(document.getElementById('_memMenu'))menu.remove();}
+  document.getElementById('_memOvr').onclick=function(){
+    savedViews[idx]={tx:tx,ty:ty,scale:scale};updateViewmemoState(idx);scheduleSave();
+    closeMenu();showGuide('記憶'+(idx+1)+'を上書き保存しました',1500);
+  };
+  document.getElementById('_memRst').onclick=function(){
+    if(confirm('記憶'+(idx+1)+'をリセットしますか？')){
+      savedViews[idx]=null;updateViewmemoState(idx);scheduleSave();
+      closeMenu();showGuide('記憶'+(idx+1)+'をリセットしました',1500);
+    }
+  };
+  document.getElementById('_memCnl').onclick=closeMenu;
+  setTimeout(function(){document.addEventListener('click',function _dc(ev){
+    if(!menu.contains(ev.target)){closeMenu();document.removeEventListener('click',_dc);}
+  });},10);
+}
+document.querySelectorAll('.show-btn').forEach(btn=>{
+  btn.addEventListener('click',()=>{
+    const i=parseInt(btn.dataset.vs);
+    if(savedViews[i]){({tx,ty,scale}=savedViews[i]);scheduleDraw();}
+  });
+});
+
+
+// カラーピッカー開閉
+document.getElementById('colorIndicatorBtn').addEventListener('click',function(e){
+  e.stopPropagation();
+  document.getElementById('colorOverlay').classList.toggle('open');
+});
+document.addEventListener('click',function(e){
+  const co=document.getElementById('colorOverlay');
+  if(co.classList.contains('open')&&!co.contains(e.target)&&e.target.id!=='colorIndicatorBtn'){
+    co.classList.remove('open');
+  }
+});
+// ダブルタップ → 全体表示
+let _dtCount=0,_dtTimer=0;
+ov.addEventListener('touchend',function(e){
+  if(e.changedTouches.length===1&&e.touches.length===0){
+    if(e.changedTouches[0].touchType==='stylus')return;
+    _dtCount++;
+    if(_dtCount===1){_dtTimer=setTimeout(function(){_dtCount=0;},350);}
+    else if(_dtCount>=2){clearTimeout(_dtTimer);_dtCount=0;fit();scheduleDraw();}
+  }
+},{passive:false});
+// 2本指パンと競合するため2本指タップUndoは廃止 → ↩ボタンで操作
+// viewmemo初期状態
+[0,1,2].forEach(i=>updateViewmemoState(i));
+// localStorage 保存・復元
+function scheduleSave(){clearTimeout(saveTimer);saveTimer=setTimeout(doSave,800);}
+function arrayBufferToB64(buf){
+  const bytes=new Uint8Array(buf);let bin='';const CH=8192;
+  for(let i=0;i<bytes.length;i+=CH)bin+=String.fromCharCode.apply(null,bytes.subarray(i,i+CH));
+  return btoa(bin);
+}
+function doSave(){
+  try{
+    const sd=parseFloat(document.getElementById('scaleDenom').value)||1;
+    localStorage.setItem(SAVE_KEY,JSON.stringify({
+      strokes,dims,savedViews,tx,ty,scale,
+      bwMode,scaleDenom:sd,hiddenLayers:[...hiddenLayers],
+      currentTool,currentColor,currentLW,currentFileName
+    }));
+  }catch(e){}
+}
+function saveFile(buf,name){
+  if(!buf||buf.byteLength>1.5*1024*1024){localStorage.removeItem(FILE_KEY);return;}
+  try{localStorage.setItem(FILE_KEY,JSON.stringify({name,b64:arrayBufferToB64(buf)}));}
+  catch(e){localStorage.removeItem(FILE_KEY);}
+}
+async function tryRestore(){
+  try{
+    const fr=localStorage.getItem(FILE_KEY);
+    if(fr){
+      const{name,b64}=JSON.parse(fr);
+      const bin=atob(b64);const buf=new ArrayBuffer(bin.length);const arr=new Uint8Array(buf);
+      for(let i=0;i<bin.length;i++)arr[i]=bin.charCodeAt(i);
+      currentFileName=name;
+      if(name.toLowerCase().endsWith('.pdf')){
+        await loadPDF(buf);
+      } else {
+        doc=parseDXF(buf);buildLayerModal();detectScale();
+      }
+      const nd=document.getElementById('noDrawingMsg');if(nd)nd.style.display='none';
+      updateFileNameDisplay();
+    }
+    const raw=localStorage.getItem(SAVE_KEY);if(!raw)return;
+    const d=JSON.parse(raw);
+    strokes=d.strokes||[];dims=d.dims||[];
+    savedViews=d.savedViews||[null,null,null];
+    tx=d.tx||0;ty=d.ty||0;scale=d.scale||1;
+    bwMode=!!d.bwMode;
+    if(d.hiddenLayers)hiddenLayers=new Set(d.hiddenLayers);
+    currentTool=d.currentTool||'sketch';
+    if(currentTool==='dx'||currentTool==='dy')currentTool='dxdy';
+    if(d.currentColor)currentColor=d.currentColor;
+    if(d.currentLW)currentLW=d.currentLW;
+    if(d.scaleDenom)document.getElementById('scaleDenom').value=d.scaleDenom;
+    if(bwMode){
+      document.getElementById('bwWhite').classList.add('active');
+      document.getElementById('bwBlack').classList.remove('active');
+    } else {
+      document.getElementById('bwBlack').classList.add('active');
+      document.getElementById('bwWhite').classList.remove('active');
+    }
+    document.querySelectorAll('.tool-btn').forEach(b=>{
+      b.classList.toggle('active',b.dataset.tool===currentTool);
+    });
+    const dot=document.getElementById('colorDot');
+    if(dot&&currentColor)dot.style.background=`rgb(${currentColor.r},${currentColor.g},${currentColor.b})`;
+    [0,1,2].forEach(i=>updateViewmemoState(i));
+    scheduleDraw();scheduleOverlay();updateUndoRedo();
+  }catch(e){console.warn('restore:',e);}
+}
+
+// リサイズ
+const ro=new ResizeObserver(resizeCanvas);ro.observe(stage);
+tryRestore();
+resizeCanvas();scheduleDraw();
+const vd = document.getElementById('versionDisplay');
+if(vd) vd.textContent = APP_VERSION;
+
+// ════════════════════════════════════════════════════
+// V0_43 拡張コード（メインスクリプト末尾に統合）
+// ── 旧 script[src=pdf.min.js] インラインコードを移動 ──
+// ════════════════════════════════════════════════════
+// ════════════════════════════════════════════════════
+// V0_31 拡張コード
+// ════════════════════════════════════════════════════
+
+// ── A. 線幅ボタン削除済み（V0_43: UIシンプル化） ──────────────────
+
+// [measurement.js] 拡張スナップ(B) + 統一計測UX(C)
+</script>
+<script>
+// measurement.js — DXF Viewer 計測モジュール
+// V0_43ベース: 機能変更なし、コード分離のみ
+// 依存グローバル: doc, hiddenLayers, scale, tx, ty, dims,
+//                 w2s, s2w, scheduleOverlay, scheduleDraw,
+//                 snapshot, scheduleSave, showGuide, ov
+
+// =========================================================
+// 寸法描画・スナップ・寸法構築
+// =========================================================
 function drawDimEntity(ctx,d){
   ctx.strokeStyle=d.color||'#f39c12';ctx.fillStyle=d.color||'#f39c12';
   ctx.lineWidth=1.5;ctx.setLineDash([]);
@@ -924,35 +1498,75 @@ function drawDimEntity(ctx,d){
   if(d.text){
     const[sx,sy]=w2s(d.tx,d.ty);
     ctx.save();ctx.translate(sx,sy);ctx.rotate(d.tangle||0);
-    ctx.font='bold 13px sans-serif';ctx.fillStyle=d.color||'#f39c12';
+    ctx.font='bold 17px sans-serif';ctx.fillStyle=d.color||'#f39c12';
     ctx.textAlign='center';ctx.textBaseline='bottom';ctx.fillText(d.text,0,0);ctx.restore();
   }
 }
 
 // =========================================================
-// スナップ
+// スナップ (優先度付き: 交点>端点>中心>中点)
 // =========================================================
+function lineIntersect(x1,y1,x2,y2,x3,y3,x4,y4){
+  const d=(x1-x2)*(y3-y4)-(y1-y2)*(x3-x4);
+  if(Math.abs(d)<1e-10) return null;
+  const t=((x1-x3)*(y3-y4)-(y1-y3)*(x3-x4))/d;
+  const u=-((x1-x2)*(y1-y3)-(y1-y2)*(x1-x3))/d;
+  if(t>=-1e-9&&t<=1+1e-9&&u>=-1e-9&&u<=1+1e-9)
+    return{x:x1+t*(x2-x1),y:y1+t*(y2-y1)};
+  return null;
+}
+function distToSeg(px,py,x1,y1,x2,y2){
+  const dx=x2-x1,dy=y2-y1,len2=dx*dx+dy*dy;
+  if(len2<1e-12) return Math.hypot(px-x1,py-y1);
+  const t=Math.max(0,Math.min(1,((px-x1)*dx+(py-y1)*dy)/len2));
+  return Math.hypot(px-(x1+t*dx),py-(y1+t*dy));
+}
 function snapAt(wx,wy){
   if(!doc) return null;
-  const sr=12/scale;
-  let best=null,bestD=sr;
+  const sr=24/scale;
+  const BN={int:sr*0.55,end:sr*0.35,ten:sr*0.40,cen:sr*0.20,mid:sr*0.05};
+  let best=null,bestScore=sr;
   function check(x,y,type){
+    if(!isFinite(x)||!isFinite(y)) return;
     const d=Math.hypot(x-wx,y-wy);
-    if(d<bestD){bestD=d;best={x,y,type};}
+    if(d>sr) return;
+    const score=d-(BN[type]||0);
+    if(score<bestScore){bestScore=score;best={x,y,type};}
   }
-  for(const e of doc.sen){
-    if(hiddenLayers.has(e.layer)) continue;
-    check(e.x1,e.y1,'end');check(e.x2,e.y2,'end');
+  // キャッシュ+二分探索: X範囲を絞り込んでO(log n+m)で検索
+  function checkArr(arr,type){
+    const xlo=wx-sr;
+    let lo=0,hi=arr.length;
+    while(lo<hi){const m=(lo+hi)>>1;if(arr[m].x<xlo)lo=m+1;else hi=m;}
+    for(let i=lo;i<arr.length&&arr[i].x<=wx+sr;i++){
+      if(hiddenLayers.has(arr[i].layer)) continue;
+      check(arr[i].x,arr[i].y,type);
+    }
   }
-  for(const e of doc.enko){
-    if(hiddenLayers.has(e.layer)) continue;
-    check(e.cx,e.cy,'center');
-    check(e.cx+e.r*Math.cos(e.a1*Math.PI/180),e.cy+e.r*Math.sin(e.a1*Math.PI/180),'end');
-    check(e.cx+e.r*Math.cos(e.a2*Math.PI/180),e.cy+e.r*Math.sin(e.a2*Math.PI/180),'end');
+  // キャッシュが空（レイヤ変更後など）なら再構築
+  if(_scEndPts.length===0&&doc.sen.length>0) buildSnapCache();
+  checkArr(_scEndPts,'end');
+  checkArr(_scMidPts,'mid');
+  checkArr(_scCenPts,'cen');
+  // 交点: 付近の線分のみ（軽量モードで上限を抑える）
+  const maxInt=perfMode?25:80;
+  const near=doc.sen.filter(e=>!hiddenLayers.has(e.layer)&&distToSeg(wx,wy,e.x1,e.y1,e.x2,e.y2)<sr*1.5);
+  const lim=Math.min(near.length,maxInt);
+  outer:for(let i=0;i<lim;i++){
+    for(let j=i+1;j<lim;j++){
+      const a=near[i],b=near[j];
+      const ix=lineIntersect(a.x1,a.y1,a.x2,a.y2,b.x1,b.y1,b.x2,b.y2);
+      if(ix) check(ix.x,ix.y,'int');
+      if(bestScore<-sr*0.2) break outer;
+    }
   }
-  for(const e of doc.sen){
-    if(hiddenLayers.has(e.layer)) continue;
-    check((e.x1+e.x2)/2,(e.y1+e.y2)/2,'mid');
+  // 点要素(POINT/ten)スナップ
+  if(doc.ten){
+    for(var _ti=0;_ti<doc.ten.length;_ti++){
+      var _te=doc.ten[_ti];
+      if(hiddenLayers.has(_te.layer)) continue;
+      check(_te.x,_te.y,'ten');
+    }
   }
   return best;
 }
@@ -983,391 +1597,894 @@ function buildDim(p1,p2,pArrow,type){
     arrows.push({x,y:p1.y,angle:-dir+Math.PI});arrows.push({x,y:p2.y,angle:-dir});
     tx2=x;ty2=(p1.y+p2.y)/2;tangle=-Math.PI/2;
   } else {
+    // diag: 斜め距離寸法。正確な幾何計算（オフセット寸法線＋補助線2本＋矢印2個）
     const dx=p2.x-p1.x,dy=p2.y-p1.y;
-    text=formatDim(Math.hypot(dx,dy)/sd);
-    const ang=Math.atan2(dy,dx);
-    lines.push({x1:p1.x,y1:p1.y,x2:p2.x,y2:p2.y});
-    arrows.push({x:p1.x,y:p1.y,angle:Math.PI+ang});arrows.push({x:p2.x,y:p2.y,angle:ang});
-    tx2=(p1.x+p2.x)/2;ty2=(p1.y+p2.y)/2;tangle=-ang;
+    const len=Math.hypot(dx,dy);
+    if(len<1e-9) return null;
+    const ux=dx/len,uy=dy/len;
+    // 法線ベクトル（左90度）
+    const nx2=-uy,ny2=ux;
+    const midX=(p1.x+p2.x)/2,midY=(p1.y+p2.y)/2;
+    // pArrow が未指定またはp2と同じ場合は法線方向50px先をデフォルト位置に
+    const pRef=(pArrow&&(pArrow.x!==p2.x||pArrow.y!==p2.y))
+      ?pArrow:{x:midX+nx2*50/scale,y:midY+ny2*50/scale};
+    // p3のオフセット量（法線方向への射影）
+    const offset2=(pRef.x-midX)*nx2+(pRef.y-midY)*ny2;
+    // 寸法線端点
+    const ep1x=p1.x+nx2*offset2,ep1y=p1.y+ny2*offset2;
+    const ep2x=p2.x+nx2*offset2,ep2y=p2.y+ny2*offset2;
+    // 補助線（寸法線外側に少しはみ出す）
+    const ext2=8/scale;
+    const sig2=offset2>=0?1:-1;
+    const a1=Math.atan2(uy,-ux),a2=Math.atan2(-uy,ux);  // スクリーン空間: Y軸反転考慮
+    text=formatDim(len/sd);
+    tx2=pRef.x;ty2=pRef.y;
+    // 寸法線方向角度（drawDimEntityのctx.rotateで使用）
+    var screenAng=Math.atan2(-uy,ux);  // Y軸反転を考慮したスクリーン空間の角度
+    // 文字が逆さにならないよう-90°〜90°の範囲に正規化
+    tangle=(screenAng>Math.PI/2)?screenAng-Math.PI:(screenAng<-Math.PI/2)?screenAng+Math.PI:screenAng;
+    lines.push({x1:ep1x,y1:ep1y,x2:ep2x,y2:ep2y});
+    lines.push({x1:p1.x,y1:p1.y,x2:ep1x+nx2*sig2*ext2,y2:ep1y+ny2*sig2*ext2});
+    lines.push({x1:p2.x,y1:p2.y,x2:ep2x+nx2*sig2*ext2,y2:ep2y+ny2*sig2*ext2});
+    // 引出線: 寸法値が寸法線範囲外の場合、端点からpRefへ引出
+    const tRef2=(pRef.x-p1.x)*ux+(pRef.y-p1.y)*uy;
+    if(tRef2<-1/scale) lines.push({x1:ep1x,y1:ep1y,x2:pRef.x,y2:pRef.y});
+    else if(tRef2>len+1/scale) lines.push({x1:ep2x,y1:ep2y,x2:pRef.x,y2:pRef.y});
+    arrows.push({x:ep1x,y:ep1y,angle:a1});arrows.push({x:ep2x,y:ep2y,angle:a2});
   }
   return {lines,arrows,text,tx:tx2,ty:ty2,tangle,color:'#f39c12'};
 }
 
 function formatDim(d){
-  if(d>=100) return Math.round(d)+'';
-  if(d>=10) return d.toFixed(1);
-  return d.toFixed(2);
+  // 小数第1位まで四捨五入。.0の場合は小数点ごと省略
+  var v=Math.round(d*10)/10;
+  return (v%1===0)?String(Math.round(v)):v.toFixed(1);
 }
 
-function detectScale(){}
+// ── B. 拡張スナップ（円-直線交点・円-円交点） ──────────────────────────
+;(function(){
+  var _origSnapAt=snapAt;
+  window.snapAt=function(wx,wy){
+    var base=_origSnapAt(wx,wy);
+    if(!doc) return base;
+    var extras=[];
+    var sr=24/scale;
+    var sen=doc.sen||[], enko=doc.enko||[];
 
-// =========================================================
-// 情報表示・レイヤモーダル
-// =========================================================
-function showInfo(){
-  if(!doc){document.getElementById('infoBox').textContent='ファイルを開いてください';return;}
-  document.getElementById('infoBox').innerHTML=
-    `線:${doc.sen.length} 円弧:${doc.enko.length}<br>文字:${doc.moji.length} 点:${doc.ten.length}<br>ソリッド:${doc.solid.length}<br>レイヤ:${Object.keys(doc.layerMap).length}<br>Ver:${doc.ver||'不明'}`;
-}
+    // 円-直線交点
+    enko.forEach(function(c){
+      if(hiddenLayers.has(c.layer)) return;
+      sen.forEach(function(e){
+        if(hiddenLayers.has(e.layer)) return;
+        var pts=circLineIntersect(c.cx,c.cy,c.r,e.x1,e.y1,e.x2,e.y2,c.a1,c.a2);
+        pts.forEach(function(p){
+          var d=Math.hypot(wx-p.x,wy-p.y);
+          if(d<sr) extras.push({x:p.x,y:p.y,type:'cxl',dist:d,onLine:e});
+        });
+      });
+    });
 
-function buildLayerModal(){
-  const ll=document.getElementById('layerList');ll.innerHTML='';
-  if(!doc) return;
-  for(const lname of Object.keys(doc.usedLayers).sort()){
-    const info=doc.layerMap[lname]||{color:7};
-    const c=aci(info.color||7);
-    const row=document.createElement('div');row.className='layer-row';
-    const cb=document.createElement('input');cb.type='checkbox';cb.checked=!hiddenLayers.has(lname);
-    cb.addEventListener('change',()=>{if(cb.checked)hiddenLayers.delete(lname);else hiddenLayers.add(lname);scheduleDraw();});
-    const box=document.createElement('div');box.className='layer-color-box';box.style.background=`rgb(${c.r},${c.g},${c.b})`;
-    const label=document.createElement('span');label.textContent=lname;
-    row.append(cb,box,label);ll.appendChild(row);
-  }
-}
-
-// =========================================================
-// PDF表示
-// =========================================================
-async function loadPDF(buf){
-  if(typeof pdfjsLib==='undefined'){alert('PDF.jsが読み込まれていません');return;}
-  pdfDoc=await pdfjsLib.getDocument({data:buf}).promise;
-  document.getElementById('pdfPageCtrl').style.display='';
-  document.getElementById('pageInfo').textContent=`1/${pdfDoc.numPages}`;
-  pdfPageNum=1;
-  await renderPdfPage(1);
-}
-
-async function renderPdfPage(n){
-  if(!pdfDoc) return;
-  const page=await pdfDoc.getPage(n);
-  const vp=page.getViewport({scale:3});
-  const offscreen=document.createElement('canvas');
-  offscreen.width=vp.width;offscreen.height=vp.height;
-  await page.render({canvasContext:offscreen.getContext('2d'),viewport:vp}).promise;
-  pdfImage={img:offscreen,wx:0,wy:vp.height/3,ww:vp.width/3,wh:vp.height/3};
-  fit();scheduleDraw();
-}
-
-// =========================================================
-// PDF保存
-// =========================================================
-async function savePDF(){
-  const tmp=document.createElement('canvas');
-  tmp.width=cv.width;tmp.height=cv.height;
-  const tctx=tmp.getContext('2d');
-  tctx.drawImage(cv,0,0);tctx.drawImage(ov,0,0);
-  const jpeg=tmp.toDataURL('image/jpeg',0.92).split(',')[1];
-  const pdf=buildPDF(jpeg,tmp.width,tmp.height);
-  const fname=(currentFileName||'dxf_view').replace(/\.[^.]+$/,'')
-    +'_'+new Date().toISOString().slice(2,10).replace(/-/g,'')+'.pdf';
-  if(window.showSaveFilePicker){
-    try{
-      const fh=await showSaveFilePicker({suggestedName:fname,types:[{description:'PDF',accept:{'application/pdf':['.pdf']}}]});
-      const w=await fh.createWritable();await w.write(pdf);await w.close();return;
-    }catch(e){}
-  }
-  const blob=new Blob([pdf],{type:'application/pdf'});
-  const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=fname;a.click();
-}
-
-function buildPDF(jpegB64,pw,ph){
-  const a4w=595,a4h=842;
-  let iw=a4w,ih=Math.round(ph/pw*a4w);
-  if(ih>a4h){ih=a4h;iw=Math.round(pw/ph*a4h);}
-  const ox=Math.round((a4w-iw)/2),oy=Math.round((a4h-ih)/2);
-  const imgData=atob(jpegB64);
-  const imgBytes=new Uint8Array(imgData.length);
-  for(let i=0;i<imgData.length;i++) imgBytes[i]=imgData.charCodeAt(i);
-  const enc=new TextEncoder();
-  function str(s){return enc.encode(s);}
-  function concat(...arrs){let len=0;arrs.forEach(a=>len+=a.length);const r=new Uint8Array(len);let off=0;arrs.forEach(a=>{r.set(a,off);off+=a.length;});return r;}
-  const stream=`q ${iw} 0 0 ${ih} ${ox} ${oy} cm /Im1 Do Q`;
-  const objs=[
-    `1 0 obj\n<< /Type /Catalog /Pages 2 0 R >>\nendobj\n`,
-    `2 0 obj\n<< /Type /Pages /Kids [3 0 R] /Count 1 >>\nendobj\n`,
-    `3 0 obj\n<< /Type /Page /Parent 2 0 R /MediaBox [0 0 ${a4w} ${a4h}] /Contents 4 0 R /Resources << /XObject << /Im1 5 0 R >> >> >>\nendobj\n`,
-    `4 0 obj\n<< /Length ${stream.length} >>\nstream\n${stream}\nendstream\nendobj\n`,
-  ];
-  const imgHdr=`5 0 obj\n<< /Type /XObject /Subtype /Image /Width ${pw} /Height ${ph} /ColorSpace /DeviceRGB /BitsPerComponent 8 /Filter /DCTDecode /Length ${imgBytes.length} >>\nstream\n`;
-  const imgFtr=`\nendstream\nendobj\n`;
-  const chunks=[str('%PDF-1.4\n%\xe2\xe3\xcf\xd3\n')];
-  let pos=chunks[0].length;
-  const xref=[];
-  for(let i=0;i<objs.length;i++){xref.push(pos);const s=str(objs[i]);chunks.push(s);pos+=s.length;}
-  // Image object
-  xref.push(pos);
-  const hdr=str(imgHdr);const ftr=str(imgFtr);
-  chunks.push(hdr);pos+=hdr.length;chunks.push(imgBytes);pos+=imgBytes.length;chunks.push(ftr);pos+=ftr.length;
-  const xrefPos=pos;
-  let xrefStr=`xref\n0 6\n0000000000 65535 f \n`;
-  for(const o of xref) xrefStr+=o.toString().padStart(10,'0')+' 00000 n \n';
-  xrefStr+=`trailer\n<< /Size 6 /Root 1 0 R >>\nstartxref\n${xrefPos}\n%%EOF\n`;
-  chunks.push(str(xrefStr));
-  return concat(...chunks);
-}
-
-// =========================================================
-// ポインタ処理
-// =========================================================
-function getPos(e){const r=ov.getBoundingClientRect();return {x:e.clientX-r.left,y:e.clientY-r.top};}
-
-function handlePointerDown(sx,sy,isPenInput){
-  const[wx,wy]=s2w(sx,sy);
-  if(isPenInput||currentTool==='sketch'){
-    sketchPts=[{x:wx,y:wy}];sketching=true;scheduleOverlay();return;
-  }
-  if(currentTool==='eraser'){
-    eraserPos={x:wx,y:wy};eraseAt(wx,wy);scheduleOverlay();return;
-  }
-  if(currentTool==='select'){
-    selectedImage=null;
-    for(const img of images){
-      const[isx,isy]=w2s(img.wx,img.wy);
-      if(Math.abs(sx-isx-img.ww*scale/2)<20&&Math.abs(sy-isy-img.wh*scale/2)<20){
-        selectedImage=img;dragImageStart={sx,sy,iwx:img.wx,iwy:img.wy};scheduleOverlay();return;
+    // 円-円交点
+    for(var i=0;i<enko.length;i++){
+      for(var j=i+1;j<enko.length;j++){
+        var c1=enko[i],c2=enko[j];
+        if(hiddenLayers.has(c1.layer)||hiddenLayers.has(c2.layer)) continue;
+        var pts=circCircIntersect(c1.cx,c1.cy,c1.r,c2.cx,c2.cy,c2.r,c1.a1,c1.a2,c2.a1,c2.a2);
+        pts.forEach(function(p){
+          var d=Math.hypot(wx-p.x,wy-p.y);
+          if(d<sr) extras.push({x:p.x,y:p.y,type:'cxc',dist:d});
+        });
       }
     }
-    panning=true;return;
-  }
-  if(currentTool==='dx'||currentTool==='dy'||currentTool==='diag'){
-    const snap=snapAt(wx,wy);const pt=snap||{x:wx,y:wy};
-    dimState.pts.push(pt);
-    const need=currentTool==='diag'?2:3;
-    if(dimState.pts.length>=need){
-      const[p1,p2,p3]=dimState.pts;
-      dims.push(buildDim(p1,p2,p3||p2,currentTool));
-      dimState={pts:[]};
+
+    if(extras.length===0) return base;
+    extras.sort(function(a,b){return a.dist-b.dist;});
+    var best=extras[0];
+    if(!base || best.dist<Math.hypot(wx-base.x,wy-base.y)-0.5){
+      return best;
     }
-    scheduleOverlay();return;
+    return base;
+  };
+
+  function arcAngleOk(px,py,cx,cy,a1,a2){
+    // フル円(a1=0,a2=360)は常にOK
+    if(a1===0&&a2===360) return true;
+    var ang=Math.atan2(py-cy,px-cx)*180/Math.PI;
+    ang=((ang%360)+360)%360;
+    if(a1<=a2) return ang>=a1&&ang<=a2;
+    return ang>=a1||ang<=a2; // 折り返しアーク
   }
+  function circLineIntersect(cx,cy,r,x1,y1,x2,y2,a1,a2){
+    if(a1===undefined) a1=0;
+    if(a2===undefined) a2=360;
+    var dx=x2-x1,dy=y2-y1,fx=x1-cx,fy=y1-cy;
+    var a=dx*dx+dy*dy,b=2*(fx*dx+fy*dy),c=fx*fx+fy*fy-r*r;
+    var disc=b*b-4*a*c;
+    if(disc<0) return [];
+    var res=[],sd=Math.sqrt(disc);
+    [-1,1].forEach(function(s){
+      var t=(-b+s*sd)/(2*a);
+      if(t>=-0.001&&t<=1.001){
+        var px=x1+t*dx,py=y1+t*dy;
+        if(arcAngleOk(px,py,cx,cy,a1,a2)) res.push({x:px,y:py});
+      }
+    });
+    return res;
+  }
+
+  function circCircIntersect(cx1,cy1,r1,cx2,cy2,r2,a1_1,a2_1,a1_2,a2_2){
+    if(a1_1===undefined) a1_1=0; if(a2_1===undefined) a2_1=360;
+    if(a1_2===undefined) a1_2=0; if(a2_2===undefined) a2_2=360;
+    var dx=cx2-cx1,dy=cy2-cy1,d=Math.hypot(dx,dy);
+    if(d>r1+r2+1e-9||d<Math.abs(r1-r2)-1e-9||d<1e-9) return [];
+    var a=(r1*r1-r2*r2+d*d)/(2*d);
+    var h2=r1*r1-a*a;
+    if(h2<0) return [];
+    var h=Math.sqrt(h2);
+    var mx=cx1+a*dx/d,my=cy1+a*dy/d;
+    var cands=(h<1e-9)?[{x:mx,y:my}]:[{x:mx+h*dy/d,y:my-h*dx/d},{x:mx-h*dy/d,y:my+h*dx/d}];
+    return cands.filter(function(p){
+      return arcAngleOk(p.x,p.y,cx1,cy1,a1_1,a2_1)&&arcAngleOk(p.x,p.y,cx2,cy2,a1_2,a2_2);
+    });
+  }
+})();
+
+// ── C. 統一計測UX（circDim / radDim） ──────────────────────────────
+;(function(){
+// ─ 状態 ────────────────────────────────────────────
+var DIM={
+  active:false, tool:'', phase:0,
+  pts:[], penDown:false, cur:null, downSnapPt:null
+};
+
+var GUIDES={
+  P1:'1点目を選択（ペンを当てて探索→離して確定）',
+  P2:'2点目を選択（ペンを当てて探索→離して確定）',
+  POS:'寸法位置を指定（ペンを移動→離して確定）',
+  CIRC:'円の円周にペンを近づける→離して確定→位置を指定',
+  RAD:'円または円弧を選択→離して確定→半径線の位置を指定',
+};
+
+function resetDIM(){
+  DIM.active=false; DIM.tool=''; DIM.phase=0;
+  DIM.pts=[]; DIM.penDown=false; DIM.cur=null; DIM.downSnapPt=null;
+  DIM._hoverPos=null;
 }
 
-function handlePointerMove(sx,sy,isPenInput){
-  const[wx,wy]=s2w(sx,sy);
-  if(isPenInput||currentTool==='sketch'){
-    if(sketching){sketchPts.push({x:wx,y:wy});scheduleOverlay();}return;
-  }
-  if(currentTool==='eraser'){
-    eraserPos={x:wx,y:wy};if(mouseDown)eraseAt(wx,wy);scheduleOverlay();return;
-  }
-  if(panning&&currentTool==='select'){tx+=sx-lastMX;ty+=sy-lastMY;scheduleDraw();}
-  if(selectedImage&&dragImageStart){
-    const[nwx,nwy]=s2w(sx,sy);const[owx,owy]=s2w(dragImageStart.sx,dragImageStart.sy);
-    selectedImage.wx=dragImageStart.iwx+(nwx-owx);selectedImage.wy=dragImageStart.iwy+(nwy-owy);
-    scheduleOverlay();
-  }
-  if(currentTool==='dx'||currentTool==='dy'||currentTool==='diag'){
-    snapPt=snapAt(wx,wy);scheduleOverlay();
-  }
-}
-
-function handlePointerUp(sx,sy,isPenInput){
-  if(isPenInput||currentTool==='sketch'){
-    if(sketching&&sketchPts.length>1){
-      strokes.push({pts:[...sketchPts],color:{...currentColor},lw:currentLW/scale});
-      sketching=false;sketchPts=[];scheduleOverlay();
-    }return;
-  }
-  if(currentTool==='eraser'){eraserPos=null;scheduleOverlay();return;}
-  panning=false;dragImageStart=null;selectedImage=null;
-}
-
-function eraseAt(wx,wy){
-  const r=ERASER_RADIUS_PX/scale;
-  strokes=strokes.filter(s=>!s.pts.some(p=>Math.hypot(p.x-wx,p.y-wy)<r));
-  dims=dims.filter(d=>Math.hypot(d.tx-wx,d.ty-wy)>=r);
-}
-
-function resizeCanvas(){
-  const r=stage.getBoundingClientRect();
-  cv.width=r.width;cv.height=r.height;
-  ov.width=r.width;ov.height=r.height;
-  scheduleDraw();
-}
-
-// =========================================================
-// イベントリスナー
-// =========================================================
-// マウス
-ov.addEventListener('mousedown',e=>{
-  if(e.button!==0)return;
-  mouseDown=true;const p=getPos(e);lastMX=p.x;lastMY=p.y;
-  handlePointerDown(p.x,p.y,false);
-});
-window.addEventListener('mousemove',e=>{
-  const p=getPos(e);
-  handlePointerMove(p.x,p.y,false);
-  lastMX=p.x;lastMY=p.y;
-});
-window.addEventListener('mouseup',e=>{
-  if(!mouseDown)return;mouseDown=false;
-  const p=getPos(e);handlePointerUp(p.x,p.y,false);
-});
-ov.addEventListener('wheel',e=>{
-  e.preventDefault();
-  const p=getPos(e);zoomAt(p.x,p.y,e.deltaY<0?1.15:1/1.15);scheduleDraw();
-},{passive:false});
-
-// タッチ
-ov.addEventListener('touchstart',e=>{
-  e.preventDefault();
-  if(e.touches.length===1){
-    const t=e.touches[0];const r=ov.getBoundingClientRect();
-    const sx=t.clientX-r.left,sy=t.clientY-r.top;
-    isPen=(t.touchType==='stylus');
-    mouseDown=true;lastMX=sx;lastMY=sy;
-    handlePointerDown(sx,sy,isPen);
-  } else if(e.touches.length===2){
-    if(sketching){sketching=false;sketchPts=[];}
-    const r=ov.getBoundingClientRect();
-    const t0=e.touches[0],t1=e.touches[1];
-    const x0=t0.clientX-r.left,y0=t0.clientY-r.top;
-    const x1=t1.clientX-r.left,y1=t1.clientY-r.top;
-    pinchDist=Math.hypot(x1-x0,y1-y0);
-    pinchMid={x:(x0+x1)/2,y:(y0+y1)/2};
-    mouseDown=false;
-  }
-},{passive:false});
-
-ov.addEventListener('touchmove',e=>{
-  e.preventDefault();
-  if(e.touches.length===1&&mouseDown){
-    const t=e.touches[0];const r=ov.getBoundingClientRect();
-    const sx=t.clientX-r.left,sy=t.clientY-r.top;
-    handlePointerMove(sx,sy,isPen);lastMX=sx;lastMY=sy;
-  } else if(e.touches.length===2&&pinchDist!==null){
-    const r=ov.getBoundingClientRect();
-    const t0=e.touches[0],t1=e.touches[1];
-    const x0=t0.clientX-r.left,y0=t0.clientY-r.top;
-    const x1=t1.clientX-r.left,y1=t1.clientY-r.top;
-    const dist=Math.hypot(x1-x0,y1-y0);
-    const mid={x:(x0+x1)/2,y:(y0+y1)/2};
-    if(pinchDist>0) zoomAt(mid.x,mid.y,dist/pinchDist);
-    pinchDist=dist;pinchMid=mid;scheduleDraw();
-  }
-},{passive:false});
-
-ov.addEventListener('touchend',e=>{
-  e.preventDefault();
-  if(e.touches.length===0){
-    if(mouseDown){handlePointerUp(lastMX,lastMY,isPen);mouseDown=false;}
-    pinchDist=null;pinchMid=null;
-  } else if(e.touches.length===1){
-    pinchDist=null;pinchMid=null;
-    const t=e.touches[0];const r=ov.getBoundingClientRect();
-    const sx=t.clientX-r.left,sy=t.clientY-r.top;
-    mouseDown=true;lastMX=sx;lastMY=sy;
-  }
-},{passive:false});
-
-// ファイル
-const fileInput=document.getElementById('file');
-document.getElementById('openFileBtnMain').addEventListener('click',()=>fileInput.click());
-fileInput.addEventListener('change',async e=>{
-  const f=e.target.files[0];if(!f)return;
-  currentFileName=f.name;
-  const buf=await f.arrayBuffer();
-  doc=null;pdfDoc=null;pdfImage=null;
-  document.getElementById('pdfPageCtrl').style.display='none';
-  if(f.name.toLowerCase().endsWith('.pdf')){
-    await loadPDF(buf);{const _nd=document.getElementById('noDrawingMsg');if(_nd)_nd.style.display='none';}
-  } else {
-    try{
-      doc=parseDXF(buf);
-      hiddenLayers.clear();strokes=[];dims=[];images=[];savedViews=[null,null,null];
-      buildLayerModal();detectScale();fit();scheduleDraw();showInfo();const _nd=document.getElementById('noDrawingMsg');if(_nd)_nd.style.display='none';
-    }catch(err){alert('ファイルを開けません: '+err.message);}
-  }
-  e.target.value='';
-});
-
-// サイドバー
-document.getElementById('sidebarOpen').addEventListener('click',()=>document.body.classList.add('sidebar-open'));
-document.getElementById('sidebarClose').addEventListener('click',()=>document.body.classList.remove('sidebar-open'));
-document.getElementById('layerBtn').addEventListener('click',()=>document.getElementById('layerModal').classList.add('open'));
-document.getElementById('layerClose').addEventListener('click',()=>document.getElementById('layerModal').classList.remove('open'));
-document.getElementById('layerModal').addEventListener('click',e=>{if(e.target===document.getElementById('layerModal'))document.getElementById('layerModal').classList.remove('open');});
-document.getElementById('bwBlack').addEventListener('click',()=>{
-  bwMode=false;
-  document.getElementById('bwBlack').classList.add('active');
-  document.getElementById('bwWhite').classList.remove('active');
-  scheduleDraw();
-});
-document.getElementById('bwWhite').addEventListener('click',()=>{
-  bwMode=true;
-  document.getElementById('bwWhite').classList.add('active');
-  document.getElementById('bwBlack').classList.remove('active');
-  scheduleDraw();
-});
-document.getElementById('scaleDenom').addEventListener('change',e=>{scaleDenom=parseFloat(e.target.value)||1;});
-
-// PDFページ
-document.getElementById('prevPage').addEventListener('click',async()=>{
-  if(!pdfDoc||pdfPageNum<=1)return;
-  pdfPageNum--;document.getElementById('pageInfo').textContent=`${pdfPageNum}/${pdfDoc.numPages}`;
-  await renderPdfPage(pdfPageNum);
-});
-document.getElementById('nextPage').addEventListener('click',async()=>{
-  if(!pdfDoc||pdfPageNum>=pdfDoc.numPages)return;
-  pdfPageNum++;document.getElementById('pageInfo').textContent=`${pdfPageNum}/${pdfDoc.numPages}`;
-  await renderPdfPage(pdfPageNum);
-});
-
-// ツール
-document.querySelectorAll('.tool-btn').forEach(btn=>{
-  btn.addEventListener('click',()=>{
-    document.querySelectorAll('.tool-btn').forEach(b=>b.classList.remove('active'));
-    btn.classList.add('active');currentTool=btn.dataset.tool;
-    dimState={pts:[]};sketching=false;sketchPts=[];scheduleOverlay();
-  });
-});
-document.querySelectorAll('.color-btn').forEach(btn=>{
-  btn.addEventListener('click',()=>{
-    document.querySelectorAll('.color-btn').forEach(b=>b.classList.remove('active'));
-    btn.classList.add('active');
-    const[r,g,b]=btn.dataset.color.split(',').map(Number);currentColor={r,g,b};
-  });
-});
-document.querySelectorAll('.lw-btn').forEach(btn=>{
-  btn.addEventListener('click',()=>{
-    document.querySelectorAll('.lw-btn').forEach(b=>b.classList.remove('active'));
-    btn.classList.add('active');currentLW=parseFloat(btn.dataset.lw);
+// ─ ツール切り替えのフック ────────────────────────
+// 既存ツール切り替え(.tool-btn click)の後に発火するよう遅延登録
+document.querySelectorAll('.tool-btn[data-tool]').forEach(function(btn){
+  btn.addEventListener('click',function(){
+    var t=this.dataset.tool;
+    resetDIM();
+    if(t==='circDim'||t==='radDim'){
+      DIM.active=true; DIM.tool=t; DIM.phase=0;
+      if(t==='circDim'){ showGuide(GUIDES.CIRC); console.log('Diameter Mode'); }
+      else if(t==='radDim'){ showGuide(GUIDES.RAD); console.log('Radius Mode'); }
+    }
   });
 });
 
-document.getElementById('undoBtn').addEventListener('click',()=>{
-  if(strokes.length>0) strokes.pop();
-  else if(dims.length>0) dims.pop();
+// ─ drawOverlay フック ─────────────────────────────
+var _origDO=drawOverlay;
+window.drawOverlay=function(){
+  _origDO();
+  if(DIM.active) drawDIMOverlay();
+};
+
+// snapPt のラベルマップ拡張（既存に追加）
+var SNAP_COLORS={
+  'end':'#00ff7f','int':'#ffd700','cen':'#00f0ff','mid':'#ffbb33',
+  'ten':'#ff6b6b',
+  'cxl':'#ff88cc','cxc':'#ffcc44','default':'#f39c12'
+};
+
+function drawDIMOverlay(){
+  var dpr=window.devicePixelRatio||1;
+  octx.save();
+  octx.scale(dpr,dpr);
+
+  // circDim phase=0 時: 近傍の円をハイライト
+  if(DIM.tool==='circDim'&&DIM.phase===0&&doc&&doc.enko){
+    // ホバー中の最近傍円をオレンジハイライト（DIM.cur の有無に関わらず _hoverPos を使用）
+    var _hp=DIM._hoverPos;
+    if(_hp){
+      var nearEnk=findNearestCircleEdge(_hp.x,_hp.y);
+      if(nearEnk){
+        var hsc=w2s(nearEnk.cx,nearEnk.cy);
+        var hr=nearEnk.r*scale;
+        octx.save();
+        octx.strokeStyle='#FF8C00';  // オレンジ
+        octx.lineWidth=3;
+        octx.beginPath(); octx.arc(hsc[0],hsc[1],hr,0,Math.PI*2); octx.stroke();
+        octx.restore();
+      }
+    }
+  }
+
+  // radDim phase=0 時: 近傍の円をシアンハイライト
+  if(DIM.tool==='radDim'&&DIM.phase===0&&doc&&doc.enko){
+    var _rhp=DIM._hoverPos;
+    if(_rhp){
+      var rNearEnk=findNearestCircleEdge(_rhp.x,_rhp.y);
+      if(rNearEnk){
+        var rhsc=w2s(rNearEnk.cx,rNearEnk.cy);
+        var rhr=rNearEnk.r*scale;
+        octx.save();
+        octx.strokeStyle='#00ffcc';
+        octx.lineWidth=2.5;
+        octx.setLineDash([6,3]);
+        octx.beginPath(); octx.arc(rhsc[0],rhsc[1],rhr,0,Math.PI*2); octx.stroke();
+        octx.setLineDash([]);
+        octx.restore();
+      }
+    }
+  }
+
+  // カーソル位置のスナップマーカー
+  var snap=DIM.cur;
+  if(snap){
+    var sc=w2s(snap.x,snap.y);
+    var snapType=snap.type||(snap.kind==='line'?'on_line':snap.kind==='arc'?'on_arc':null)||snap.type;
+    drawExtSnapMarker(octx,sc[0],sc[1],snapType);
+  }
+
+  // 確定済み点のマーカー
+  DIM.pts.forEach(function(p,idx){
+    var sc=w2s(p.x,p.y);
+    octx.fillStyle='#00d4ff'; octx.strokeStyle='#00d4ff';
+    octx.lineWidth=2;
+    octx.beginPath(); octx.arc(sc[0],sc[1],5,0,Math.PI*2); octx.fill();
+    octx.font='bold 12px sans-serif'; octx.textAlign='left'; octx.textBaseline='bottom';
+    octx.fillText('P'+(idx+1),sc[0]+8,sc[1]-2);
+  });
+
+  // フェーズ2: 位置指定プレビュー
+  if(DIM.phase===2 && DIM.cur){
+    drawDIMPreview(octx);
+  }
+
+  octx.restore();
+}
+
+function drawExtSnapMarker(ctx,sx,sy,type){
+  var col=SNAP_COLORS[type]||SNAP_COLORS.default;
+  ctx.save();
+  ctx.strokeStyle=col; ctx.fillStyle=col; ctx.lineWidth=2;
+  // cxl, cxc は既存と異なるマーカー形状
+  if(type==='ten'){
+    // 点要素: 二重円（小さな塗り円 + 外枠円）
+    ctx.beginPath(); ctx.arc(sx,sy,8,0,Math.PI*2); ctx.stroke();
+    ctx.beginPath(); ctx.arc(sx,sy,3,0,Math.PI*2); ctx.fill();
+  } else if(type==='cxl'){
+    ctx.beginPath();
+    ctx.moveTo(sx-8,sy-8); ctx.lineTo(sx+8,sy+8);
+    ctx.moveTo(sx+8,sy-8); ctx.lineTo(sx-8,sy+8);
+    ctx.stroke();
+    ctx.beginPath(); ctx.arc(sx,sy,4,0,Math.PI*2); ctx.stroke();
+  } else if(type==='cxc'){
+    ctx.beginPath(); ctx.arc(sx,sy,8,0,Math.PI*2); ctx.stroke();
+    ctx.beginPath(); ctx.arc(sx,sy,3,0,Math.PI*2); ctx.fill();
+  }
+  // ラベル
+  var lbl={ten:'点要素',cxl:'円-線交点',cxc:'円-円交点'}[type]||'';
+  if(lbl){
+    ctx.font='bold 11px sans-serif';
+    var tw=ctx.measureText(lbl).width;
+    ctx.fillStyle='rgba(0,0,0,0.72)';
+    ctx.fillRect(sx+15,sy-19,tw+8,17);
+    ctx.fillStyle=col;
+    ctx.textAlign='left'; ctx.textBaseline='bottom';
+    ctx.fillText(lbl,sx+19,sy-4);
+  }
+  ctx.restore();
+}
+
+function drawDIMPreview(ctx){
+  var p3=DIM.cur;
+  if(!p3) return;
+  var prevDim=null;
+  try{
+    if(DIM.tool==='circDim'){
+      if(DIM.pts.length>=1&&DIM.pts[0].ent){
+        prevDim=buildCircDimPhi(DIM.pts[0].ent,p3);
+      }
+    } else if(DIM.tool==='radDim'){
+      if(DIM.pts.length>=1&&DIM.pts[0].ent){
+        prevDim=buildRadDim(DIM.pts[0].ent,p3);
+      }
+    }
+  }catch(e){ console.warn('[DIM preview]',e); }
+  if(!prevDim||!prevDim.lines) return;
+
+  ctx.save();
+  ctx.strokeStyle='rgba(0,212,255,0.75)';
+  ctx.lineWidth=1.5; ctx.setLineDash([5,3]); ctx.lineCap='round';
+  prevDim.lines.forEach(function(l){
+    var s1=w2s(l.x1,l.y1),s2=w2s(l.x2,l.y2);
+    ctx.beginPath(); ctx.moveTo(s1[0],s1[1]); ctx.lineTo(s2[0],s2[1]); ctx.stroke();
+  });
+  ctx.setLineDash([]);
+  // 矢印プレビュー（circDim/radDim）
+  if(prevDim.arrows){
+    ctx.fillStyle='rgba(0,212,255,0.85)';
+    prevDim.arrows.forEach(function(a){
+      var sa=w2s(a.x,a.y);
+      ctx.save();ctx.translate(sa[0],sa[1]);ctx.rotate(a.angle);
+      ctx.beginPath();ctx.moveTo(0,0);ctx.lineTo(-10,4);ctx.lineTo(-10,-4);ctx.closePath();ctx.fill();ctx.restore();
+    });
+  }
+  if(prevDim.text&&prevDim.tx!=null){
+    var stx=w2s(prevDim.tx,prevDim.ty);
+    ctx.font='bold 17px sans-serif';
+    ctx.textAlign='center'; ctx.textBaseline='middle';
+    var tw=ctx.measureText(prevDim.text).width;
+    ctx.fillStyle='rgba(0,20,40,0.65)';
+    ctx.fillRect(stx[0]-tw/2-3,stx[1]-10,tw+6,20);
+    ctx.fillStyle='rgba(0,212,255,0.85)';
+    ctx.fillText(prevDim.text,stx[0],stx[1]);
+  }
+  ctx.restore();
+}
+
+// ─ φ寸法構築 ────────────────────────────────────
+function buildCircDimPhi(ent,p3){
+  var cx=ent.cx,cy=ent.cy,r=ent.r;
+  // p3方向の角度
+  var ang=Math.atan2(p3.y-cy,p3.x-cx);
+  var ux=Math.cos(ang),uy=Math.sin(ang);
+  // 直径線の端点（円周上）
+  var p1x=cx-r*ux,p1y=cy-r*uy; // p3と反対側
+  var p2x=cx+r*ux,p2y=cy+r*uy; // p3に近い側
+  var sd=parseFloat(document.getElementById('scaleDenom').value)||1;
+  var ext=6/scale; // 補助線のはみ出し量
+  // p3が円外にある場合は寸法線をp3まで延長
+  var distP3=Math.hypot(p3.x-cx,p3.y-cy);
+  var ep2x=(distP3>r+ext)?p3.x:p2x+ux*ext;
+  var ep2y=(distP3>r+ext)?p3.y:p2y+uy*ext;
+  // p3が円外の反対側延長もext分はみ出す
+  var ep1x=p1x-ux*ext, ep1y=p1y-uy*ext;
+  // スクリーン空間の角度: w2sがY軸反転するため atan2(-uy, ux) を使用
+  var screenAng=Math.atan2(-uy,ux);
+  var tangle=(screenAng>Math.PI/2)?screenAng-Math.PI:(screenAng<-Math.PI/2)?screenAng+Math.PI:screenAng;
+  return{
+    lines:[{x1:ep1x,y1:ep1y,x2:ep2x,y2:ep2y}],
+    arrows:[{x:p1x,y:p1y,angle:screenAng+Math.PI},{x:p2x,y:p2y,angle:screenAng}],
+    text:'φ'+formatDim(r*2/sd),
+    tx:p3.x,ty:p3.y,tangle:tangle,type:'phi',color:'#00d4ff'
+  };
+}
+
+
+
+function findEnkoAt(wx,wy){
+  if(!doc||!doc.enko) return null;
+  var best=null,bd=Infinity;
+  doc.enko.forEach(function(e){
+    var d=Math.abs(Math.hypot(wx-e.cx,wy-e.cy)-e.r);
+    if(d<bd){bd=d;best=e;}
+  });
+  return bd<10/scale?best:null;
+}
+
+function findNearestCircleEdge(wx,wy){
+  if(!doc||!doc.enko) return null;
+  var THRESH=24/scale; // 円周から24px以内
+  var best=null,bd=Infinity;
+  doc.enko.forEach(function(e){
+    if(hiddenLayers&&hiddenLayers.has(e.layer)) return;
+    var distToEdge=Math.abs(Math.hypot(wx-e.cx,wy-e.cy)-e.r);
+    if(distToEdge<THRESH&&distToEdge<bd){bd=distToEdge;best=e;}
+  });
+  return best;
+}
+
+
+
+function confirmDIM(p3){
+  var p1=DIM.pts[0],p2=DIM.pts[1];
+  var d=null;
+  console.log('[DIM] confirmDIM tool='+DIM.tool+' p1=',p1,' p2=',p2,' p3=',p3);
+  try{
+    if(DIM.tool==='circDim'&&p1.ent){
+      d=buildCircDimPhi(p1.ent,p3);
+      console.log('Dimension Created', d);
+    } else if(DIM.tool==='radDim'&&p1&&p1.ent){
+      d=buildRadDim(p1.ent,p3);
+      console.log('Dimension Created', d);
+    }
+  }catch(err){ console.warn('[DIM confirm]',err); }
+
+  if(d){
+    snapshot();
+    dims.push(d);
+    scheduleSave(); scheduleDraw();
+    showGuide('寸法を追加しました ↩ で取消', 2000);
+  }
+  // 次の寸法へ
+  DIM.pts=[]; DIM.phase=0; DIM.cur=null;
+  var nextGuide=DIM.tool==='circDim'?GUIDES.CIRC:GUIDES.RAD;
+  setTimeout(function(){
+    if(DIM.active) showGuide(nextGuide);
+  },2000);
   scheduleOverlay();
-});
-document.getElementById('clearBtn').addEventListener('click',()=>{
-  if(confirm('全てのスケッチと寸法を消去しますか？')){dims=[];strokes=[];scheduleOverlay();}
-});
-document.getElementById('savePDFBtn').addEventListener('click',savePDF);
-document.getElementById('rangeAreaPDFBtn').addEventListener('click',savePDF);
-document.getElementById('fitBtn').addEventListener('click',()=>{fit();scheduleDraw();});
-document.getElementById('fullscreenBtn').addEventListener('click',()=>{
-  if(!document.fullscreenElement) document.documentElement.requestFullscreen();
-  else document.exitFullscreen();
-});
+}
 
-// 表示記憶
-document.querySelectorAll('.mem-btn').forEach(btn=>{
-  btn.addEventListener('click',()=>{
-    const i=parseInt(btn.dataset.vi);savedViews[i]={tx,ty,scale};
-    btn.style.outline='2px solid #fff';setTimeout(()=>btn.style.outline='',500);
+// ─ R寸法構築 ────────────────────────────────────
+function buildRadDim(ent,p3){
+  var cx=ent.cx,cy=ent.cy,r=ent.r;
+  var ang=Math.atan2(p3.y-cy,p3.x-cx);
+  var ux=Math.cos(ang),uy=Math.sin(ang);
+  var ex=cx+r*ux,ey=cy+r*uy; // 円周上の端点
+  var sd=parseFloat(document.getElementById('scaleDenom').value)||1;
+  var ext=6/scale; // 補助線のはみ出し量
+  // p3が円外にある場合は半径線をp3まで延長
+  var distP3=Math.hypot(p3.x-cx,p3.y-cy);
+  var ep2x=(distP3>r+ext)?p3.x:ex+ux*ext;
+  var ep2y=(distP3>r+ext)?p3.y:ey+uy*ext;
+  // スクリーン空間の角度: w2sがY軸反転するため atan2(-uy, ux) を使用
+  var screenAng=Math.atan2(-uy,ux);
+  var tangle=(screenAng>Math.PI/2)?screenAng-Math.PI:(screenAng<-Math.PI/2)?screenAng+Math.PI:screenAng;
+  return{
+    lines:[{x1:cx,y1:cy,x2:ep2x,y2:ep2y}],
+    arrows:[{x:ex,y:ey,angle:screenAng+Math.PI}], // 円周上で内向き（中心方向）
+    text:'R'+formatDim(r/sd),
+    tx:p3.x,ty:p3.y,tangle:tangle,type:'rad',color:'#00d4ff'
+  };
+}
+
+// ─ window.DIM 公開（タッチ/マウス連携用） ──────────────────────
+DIM.handleDown = function(sx, sy) {
+  var wp = s2w(sx, sy);
+  var snp = snapAt(wp[0], wp[1]);
+  DIM.penDown = true;
+  DIM.downSnapPt = snp;
+  DIM.cur = snp || {x: wp[0], y: wp[1], type: 'default'};
+  console.log('[DIM] handleDown phase=' + DIM.phase + ' tool=' + DIM.tool);
+  scheduleOverlay();
+};
+
+DIM.handleMove = function(sx, sy) {
+  var wp = s2w(sx, sy);
+  // _hoverPos は penDown 不要で常時更新（circDim ハイライト用）
+  DIM._hoverPos = {x: wp[0], y: wp[1]};
+  if (!DIM.penDown) { scheduleOverlay(); return; }
+  var snp = snapAt(wp[0], wp[1]);
+  DIM.cur = snp || {x: wp[0], y: wp[1], type: 'default'};
+  scheduleOverlay();
+};
+
+DIM.handleUp = function(sx, sy) {
+  if (!DIM.penDown) return;
+  DIM.penDown = false;
+  // プレビューと確定位置を一致させる: 最後のmoveで確定したDIM.curをそのまま使う
+  // handleUpで再計算すると表示位置と異なるスナップが選ばれる可能性がある
+  var pt = DIM.cur;
+  if (!pt) {
+    var wp = s2w(sx, sy);
+    pt = {x: wp[0], y: wp[1], type: 'default'};
+  }
+
+  if (DIM.phase === 0) {
+    var entry = {x: pt.x, y: pt.y, kind: 'pt'};
+    if (DIM.tool === 'circDim') {
+      var ent = null;
+      if (pt.type === 'cen' && doc) ent = findEnkoAt(pt.x, pt.y);
+      if (!ent) ent = findNearestCircleEdge(pt.x, pt.y);
+      if (ent) {
+        entry.kind = 'circ'; entry.ent = ent;
+        entry.x = ent.cx; entry.y = ent.cy;
+        DIM.pts = [entry]; DIM.phase = 2;
+        showGuide(GUIDES.POS);
+        console.log('[DIM] circDim: circle selected', ent);
+        console.log('Target Selected', ent);
+        DIM.cur = null; scheduleOverlay(); return;
+      } else {
+        showGuide('円の近くにペンを当ててください', 1500);
+        DIM.cur = null; scheduleOverlay(); return;
+      }
+    }
+    if (DIM.tool === 'radDim') {
+      var rent_ = findNearestCircleEdge(pt.x, pt.y);
+      if (rent_) {
+        entry.kind = 'circ'; entry.ent = rent_;
+        entry.x = rent_.cx; entry.y = rent_.cy;
+        DIM.pts = [entry]; DIM.phase = 2;
+        showGuide(GUIDES.POS);
+        console.log('[DIM] radDim: circle selected', rent_);
+        console.log('Target Selected', rent_);
+        DIM.cur = null; scheduleOverlay(); return;
+      } else {
+        showGuide('円の近くにペンを当ててください', 1500);
+        DIM.cur = null; scheduleOverlay(); return;
+      }
+    }
+    DIM.pts = [entry]; DIM.phase = 1;
+    showGuide(GUIDES.P2);
+    DIM.cur = null; scheduleOverlay();
+
+  } else if (DIM.phase === 1) {
+    var entry2 = {x: pt.x, y: pt.y, kind: 'pt'};
+    DIM.pts.push(entry2); DIM.phase = 2;
+    showGuide(GUIDES.POS);
+    DIM.cur = null; scheduleOverlay();
+
+  } else if (DIM.phase === 2) {
+    confirmDIM(pt);
+  }
+};
+
+window.DIM = DIM;
+console.log('[DIM] module initialized');
+
+})(); // end C
+
+// ── D. 線と点 距離寸法 ──────────────────────────────────────────────────────
+;(function(){
+
+// ─ 状態 ────────────────────────────────────────────
+var LP={
+  active:false, phase:0,
+  selLine:null, selPt:null, footPt:null,
+  penDown:false,
+  cur:null,        // phase1: スナップ候補(null=候補なし) / phase2: 寸法位置
+  _hoverLine:null, // phase0: ハイライト中の線エンティティ（表示=確定に使用）
+  _hoverPos:null   // 最新カーソル位置
+};
+
+var LP_GUIDES={
+  LINE:'線の近くにペンを当てて選択（離して確定）',
+  PT:  'スナップ点を選択（候補点→離して確定）',
+  POS: '寸法位置を指定（移動→離して確定）',
+};
+
+function resetLP(){
+  LP.active=false; LP.phase=0;
+  LP.selLine=null; LP.selPt=null; LP.footPt=null;
+  LP.penDown=false; LP.cur=null; LP._hoverLine=null; LP._hoverPos=null;
+}
+
+// ─ 垂線の足 ─────────────────────────────────────────
+function computeFoot(line,pt){
+  var dx=line.x2-line.x1,dy=line.y2-line.y1,len2=dx*dx+dy*dy;
+  if(len2<1e-12) return {x:line.x1,y:line.y1};
+  var t=((pt.x-line.x1)*dx+(pt.y-line.y1)*dy)/len2;
+  return {x:line.x1+t*dx,y:line.y1+t*dy};
+}
+
+// ─ 最近傍線 ─────────────────────────────────────────
+function findNearestSen(wx,wy){
+  if(!doc||!doc.sen) return null;
+  var sr=30/scale,best=null,bestDist=sr;
+  for(var i=0;i<doc.sen.length;i++){
+    var e=doc.sen[i];
+    if(hiddenLayers.has(e.layer)) continue;
+    var d=distToSeg(wx,wy,e.x1,e.y1,e.x2,e.y2);
+    if(d<bestDist){bestDist=d;best=e;}
+  }
+  return best;
+}
+
+// ─ LP専用スナップマーカー（全snap type対応） ─────────────
+function drawLPSnapMarker(ctx2,sx,sy,type){
+  var cols={end:'#00ff7f',mid:'#ffbb33',cen:'#00f0ff',int:'#ffd700',
+            ten:'#ff6b6b',cxl:'#ff88cc',cxc:'#ffcc44','default':'#f39c12'};
+  var col=cols[type]||cols['default'];
+  var r=9;
+  ctx2.save();
+  ctx2.strokeStyle=col; ctx2.fillStyle=col;
+  ctx2.lineWidth=2.5; ctx2.setLineDash([]);
+  if(type==='end'){
+    // 正方形（端点）
+    ctx2.strokeRect(sx-r,sy-r,r*2,r*2);
+  } else if(type==='mid'){
+    // 三角形（中点）
+    ctx2.beginPath();
+    ctx2.moveTo(sx,sy-r); ctx2.lineTo(sx+r,sy+r); ctx2.lineTo(sx-r,sy+r);
+    ctx2.closePath(); ctx2.stroke();
+  } else if(type==='cen'){
+    // 円+クロス（中心）
+    ctx2.beginPath(); ctx2.arc(sx,sy,r,0,Math.PI*2); ctx2.stroke();
+    ctx2.beginPath();
+    ctx2.moveTo(sx-r,sy); ctx2.lineTo(sx+r,sy);
+    ctx2.moveTo(sx,sy-r); ctx2.lineTo(sx,sy+r);
+    ctx2.stroke();
+  } else if(type==='int'){
+    // X字（交点）
+    ctx2.beginPath();
+    ctx2.moveTo(sx-r,sy-r); ctx2.lineTo(sx+r,sy+r);
+    ctx2.moveTo(sx+r,sy-r); ctx2.lineTo(sx-r,sy+r);
+    ctx2.stroke();
+  } else if(type==='ten'){
+    // 点要素: 二重円
+    ctx2.beginPath(); ctx2.arc(sx,sy,8,0,Math.PI*2); ctx2.stroke();
+    ctx2.beginPath(); ctx2.arc(sx,sy,3,0,Math.PI*2); ctx2.fill();
+  } else if(type==='cxl'){
+    // 円-線交点
+    ctx2.beginPath();
+    ctx2.moveTo(sx-8,sy-8); ctx2.lineTo(sx+8,sy+8);
+    ctx2.moveTo(sx+8,sy-8); ctx2.lineTo(sx-8,sy+8);
+    ctx2.stroke();
+    ctx2.beginPath(); ctx2.arc(sx,sy,4,0,Math.PI*2); ctx2.stroke();
+  } else if(type==='cxc'){
+    // 円-円交点
+    ctx2.beginPath(); ctx2.arc(sx,sy,8,0,Math.PI*2); ctx2.stroke();
+    ctx2.beginPath(); ctx2.arc(sx,sy,3,0,Math.PI*2); ctx2.fill();
+  } else {
+    // default: クロス
+    ctx2.beginPath();
+    ctx2.moveTo(sx-r,sy); ctx2.lineTo(sx+r,sy);
+    ctx2.moveTo(sx,sy-r); ctx2.lineTo(sx,sy+r);
+    ctx2.stroke();
+  }
+  // snap type ラベル
+  var lbl={end:'端点',mid:'中点',cen:'中心',int:'交点',ten:'点要素',
+           cxl:'円-線交点',cxc:'円-円交点'}[type]||'';
+  if(lbl){
+    ctx2.font='bold 11px sans-serif';
+    var tw=ctx2.measureText(lbl).width;
+    ctx2.fillStyle='rgba(0,0,0,0.75)';
+    ctx2.fillRect(sx+13,sy-17,tw+8,16);
+    ctx2.fillStyle=col;
+    ctx2.textAlign='left'; ctx2.textBaseline='bottom';
+    ctx2.fillText(lbl,sx+17,sy-3);
+  }
+  ctx2.restore();
+}
+
+// ─ 寸法構築 ─────────────────────────────────────────
+function buildLinePtDim(line,pt,pArrow){
+  var sd=parseFloat(document.getElementById('scaleDenom').value)||1;
+  var dx=line.x2-line.x1,dy=line.y2-line.y1;
+  var lineLen=Math.hypot(dx,dy);
+  if(lineLen<1e-9) return null;
+  var lux=dx/lineLen,luy=dy/lineLen;
+  var foot=computeFoot(line,pt);
+  var perpX=pt.x-foot.x,perpY=pt.y-foot.y;
+  var dist=Math.hypot(perpX,perpY);
+  if(dist<1e-9) return null;
+  var ux=perpX/dist,uy=perpY/dist;
+  var offset=(pArrow.x-foot.x)*lux+(pArrow.y-foot.y)*luy;
+  var d1={x:foot.x+lux*offset,y:foot.y+luy*offset};
+  var d2={x:pt.x  +lux*offset,y:pt.y  +luy*offset};
+  var ext=8/scale,sig=offset>=0?1:-1;
+  var lines=[
+    {x1:foot.x,y1:foot.y,x2:d1.x+lux*sig*ext,y2:d1.y+luy*sig*ext},
+    {x1:pt.x,  y1:pt.y,  x2:d2.x+lux*sig*ext,y2:d2.y+luy*sig*ext},
+    {x1:d1.x,  y1:d1.y,  x2:d2.x,             y2:d2.y}
+  ];
+  var screenAng=Math.atan2(-uy,ux);
+  var arrows=[
+    {x:d1.x,y:d1.y,angle:screenAng+Math.PI},
+    {x:d2.x,y:d2.y,angle:screenAng}
+  ];
+  var tx2=(d1.x+d2.x)/2,ty2=(d1.y+d2.y)/2;
+  var tangle=(screenAng>Math.PI/2)?screenAng-Math.PI:(screenAng<-Math.PI/2)?screenAng+Math.PI:screenAng;
+  var sd1=w2s(d1.x,d1.y),sd2=w2s(d2.x,d2.y);
+  var pxLen=Math.hypot(sd2[0]-sd1[0],sd2[1]-sd1[1]);
+  if(pxLen<60){
+    var ref=(offset>=0?32:-32)/scale;
+    tx2=d2.x+lux*ref; ty2=d2.y+luy*ref;
+    lines.push({x1:d2.x,y1:d2.y,x2:tx2,y2:ty2});
+  }
+  return {lines,arrows,
+    text:formatDim(dist/sd),
+    tx:tx2,ty:ty2,tangle,color:'#f39c12'};
+}
+
+// ─ プレビュー描画(点線) ───────────────────────────────
+function drawLPPreview(ctx2,dim){
+  if(!dim) return;
+  ctx2.strokeStyle=ctx2.fillStyle=dim.color||'#f39c12';
+  ctx2.lineWidth=1.5; ctx2.setLineDash([5,4]);
+  for(var i=0;i<dim.lines.length;i++){
+    var l=dim.lines[i],s1=w2s(l.x1,l.y1),s2=w2s(l.x2,l.y2);
+    ctx2.beginPath();ctx2.moveTo(s1[0],s1[1]);ctx2.lineTo(s2[0],s2[1]);ctx2.stroke();
+  }
+  ctx2.setLineDash([]);
+  for(var j=0;j<dim.arrows.length;j++){
+    var a=dim.arrows[j],sa=w2s(a.x,a.y);
+    ctx2.save();ctx2.translate(sa[0],sa[1]);ctx2.rotate(a.angle);
+    ctx2.beginPath();ctx2.moveTo(0,0);ctx2.lineTo(-10,4);ctx2.lineTo(-10,-4);
+    ctx2.closePath();ctx2.fill();ctx2.restore();
+  }
+  if(dim.text){
+    var st=w2s(dim.tx,dim.ty);
+    ctx2.save();ctx2.translate(st[0],st[1]);ctx2.rotate(dim.tangle||0);
+    ctx2.font='bold 17px sans-serif';ctx2.fillStyle=dim.color||'#f39c12';
+    ctx2.textAlign='center';ctx2.textBaseline='bottom';
+    ctx2.fillText(dim.text,0,0);ctx2.restore();
+  }
+}
+
+// ─ drawOverlay フック ─────────────────────────────────
+var _lpOrigDO=window.drawOverlay;
+window.drawOverlay=function(){ _lpOrigDO(); if(LP.active) drawLPOverlay(); };
+
+function drawLPOverlay(){
+  var dpr=window.devicePixelRatio||1;
+  var ctx2=octx;
+  ctx2.save(); ctx2.scale(dpr,dpr);
+
+  // Phase0: _hoverLine をハイライト (再検索しない ─ 表示=確定を保証)
+  if(LP.phase===0&&LP._hoverLine){
+    var hl=LP._hoverLine;
+    var hs1=w2s(hl.x1,hl.y1),hs2=w2s(hl.x2,hl.y2);
+    ctx2.save();
+    ctx2.strokeStyle='#ff8c00'; ctx2.lineWidth=5; ctx2.setLineDash([]);
+    ctx2.globalAlpha=0.85;
+    ctx2.beginPath(); ctx2.moveTo(hs1[0],hs1[1]); ctx2.lineTo(hs2[0],hs2[1]); ctx2.stroke();
+    ctx2.restore();
+  }
+
+  // 選択確定済み線ハイライト(Phase1,2)
+  if(LP.selLine&&LP.phase>=1){
+    var ls1=w2s(LP.selLine.x1,LP.selLine.y1),ls2=w2s(LP.selLine.x2,LP.selLine.y2);
+    ctx2.save();
+    ctx2.strokeStyle='#ff8c00'; ctx2.lineWidth=5; ctx2.setLineDash([]);
+    ctx2.globalAlpha=0.9;
+    ctx2.beginPath(); ctx2.moveTo(ls1[0],ls1[1]); ctx2.lineTo(ls2[0],ls2[1]); ctx2.stroke();
+    ctx2.restore();
+  }
+
+  // Phase1: スナップ候補マーカー (LP.cur!=null の時のみ表示)
+  if(LP.phase===1&&LP.cur){
+    var sc=w2s(LP.cur.x,LP.cur.y);
+    drawLPSnapMarker(ctx2,sc[0],sc[1],LP.cur.type||'default');
+  }
+
+  // Phase2: 選択済み点+垂点マーカー
+  if(LP.selPt&&LP.phase===2){
+    var spt=w2s(LP.selPt.x,LP.selPt.y);
+    ctx2.save();
+    ctx2.strokeStyle='#00ff7f'; ctx2.lineWidth=2; ctx2.setLineDash([]);
+    ctx2.beginPath(); ctx2.arc(spt[0],spt[1],6,0,Math.PI*2); ctx2.stroke();
+    if(LP.footPt){
+      var sfp=w2s(LP.footPt.x,LP.footPt.y);
+      ctx2.strokeStyle='#88ccff'; ctx2.lineWidth=1.5;
+      ctx2.beginPath(); ctx2.arc(sfp[0],sfp[1],4,0,Math.PI*2); ctx2.stroke();
+      ctx2.strokeStyle='rgba(255,140,0,0.35)'; ctx2.setLineDash([4,4]);
+      ctx2.beginPath(); ctx2.moveTo(sfp[0],sfp[1]); ctx2.lineTo(spt[0],spt[1]); ctx2.stroke();
+      ctx2.setLineDash([]);
+    }
+    ctx2.restore();
+  }
+
+  // Phase2: プレビュー
+  if(LP.phase===2&&LP.cur&&LP.selLine&&LP.selPt){
+    drawLPPreview(ctx2,buildLinePtDim(LP.selLine,LP.selPt,LP.cur));
+  }
+
+  ctx2.restore();
+}
+
+// ─ ヘルパー: _hoverLine を更新(phase0用) ────────────────
+function _updateHoverLine(wx,wy){
+  LP._hoverLine=findNearestSen(wx,wy);
+}
+
+// ─ ヘルパー: LP.cur を更新(phase1スナップ用) ─────────────
+function _updateSnap(wx,wy){
+  var snp=window.snapAt(wx,wy);
+  LP.cur=snp||null; // null=候補なし(フォールバック位置への確定を禁止)
+  if(snp) console.log('[LP] snap type='+snp.type
+    +' ('+snp.x.toFixed(1)+','+snp.y.toFixed(1)+')');
+}
+
+// ─ ポインタハンドラ ───────────────────────────────────
+LP.handleDown=function(sx,sy){
+  var wp=s2w(sx,sy);
+  LP._hoverPos={x:wp[0],y:wp[1]};
+  LP.penDown=true;
+  if(LP.phase===0){
+    _updateHoverLine(wp[0],wp[1]);
+  } else if(LP.phase===1){
+    _updateSnap(wp[0],wp[1]);
+  } else if(LP.phase===2){
+    LP.cur={x:wp[0],y:wp[1]};
+  }
+  scheduleOverlay();
+};
+
+LP.handleMove=function(sx,sy){
+  var wp=s2w(sx,sy);
+  LP._hoverPos={x:wp[0],y:wp[1]};
+  if(!LP.penDown){scheduleOverlay();return;}
+  if(LP.phase===0){
+    _updateHoverLine(wp[0],wp[1]);
+  } else if(LP.phase===1){
+    _updateSnap(wp[0],wp[1]);
+  } else if(LP.phase===2){
+    LP.cur={x:wp[0],y:wp[1]};
+  }
+  scheduleOverlay();
+};
+
+LP.handleUp=function(sx,sy){
+  if(!LP.penDown) return;
+  LP.penDown=false;
+  if(LP.phase===0){
+    // handleDown/Moveで更新した _hoverLine をそのまま確定
+    // handleUpで再検索しない → 表示=確定を保証
+    if(LP._hoverLine){
+      LP.selLine=LP._hoverLine;
+      LP._hoverLine=null;
+      LP.phase=1; LP.cur=null;
+      showGuide(LP_GUIDES.PT,0);
+      console.log('[LP] line selected');
+    } else {
+      showGuide('線の近くにペンを当ててください',1500);
+    }
+  } else if(LP.phase===1){
+    // LP.cur==null → スナップ候補なし → 確定禁止
+    if(!LP.cur){
+      showGuide('スナップ点を選択してください',1500);
+      console.log('[LP] point selection failed: no snap candidate');
+    } else {
+      var pt=LP.cur;
+      LP.selPt=pt;
+      LP.footPt=computeFoot(LP.selLine,pt);
+      LP.phase=2; LP.cur=null;
+      showGuide(LP_GUIDES.POS,0);
+      console.log('[LP] point selected: ('
+        +pt.x.toFixed(1)+','+pt.y.toFixed(1)+') type='+pt.type);
+    }
+  } else if(LP.phase===2){
+    var wp=s2w(sx,sy);
+    var pArrow=LP.cur||{x:wp[0],y:wp[1]};
+    var dim=buildLinePtDim(LP.selLine,LP.selPt,pArrow);
+    console.log('[LP] dim placed: '+(dim?dim.text:'null'));
+    if(dim){ snapshot(); dims.push(dim); scheduleSave(); scheduleDraw(); }
+    LP.selLine=null; LP.selPt=null; LP.footPt=null; LP.phase=0; LP.cur=null;
+    showGuide(LP_GUIDES.LINE,0);
+    console.log('[LP] → phase0: reset');
+  }
+  scheduleOverlay();
+};
+
+// ─ ツール切り替えフック ─────────────────────────────────
+document.querySelectorAll('.tool-btn[data-tool]').forEach(function(btn){
+  btn.addEventListener('click',function(){
+    var t=this.dataset.tool;
+    if(t==='lp'){
+      if(window.DIM) window.DIM.active=false;
+      resetLP(); LP.active=true; LP.phase=0;
+      showGuide(LP_GUIDES.LINE,0);
+      console.log('[LP] tool activated');
+    } else {
+      resetLP();
+    }
   });
 });
-document.querySelectorAll('.show-btn').forEach(btn=>{
-  btn.addEventListener('click',()=>{
-    const i=parseInt(btn.dataset.vs);
-    if(savedViews[i]){({tx,ty,scale}=savedViews[i]);scheduleDraw();}
-  });
-});
 
-// リサイズ
-const ro=new ResizeObserver(resizeCanvas);ro.observe(stage);
-resizeCanvas();scheduleDraw();
+window.LP=LP;
+console.log('[LP] module initialized');
+
+})(); // end D
+
 </script>
+<div id="guideMsg" style="
+  display:none;
+  position:fixed;
+  top:68px;
+  left:50%;
+  transform:translateX(-50%);
+  background:rgba(10,20,35,0.85);
+  color:#7dd8ff;
+  padding:7px 14px;
+  border-radius:10px;
+  font-size:13px;
+  font-weight:500;
+  pointer-events:none;
+  z-index:9100;
+  backdrop-filter:blur(6px);
+  border:1px solid rgba(100,200,255,0.25);
+  white-space:pre-wrap;
+  max-width:400px;
+  text-align:center;
+  letter-spacing:0.04em;
+"></div>
+<div id="versionDisplay" style="position:fixed;right:6px;top:4px;font-size:10px;color:rgba(150,180,210,0.6);pointer-events:none;z-index:9999;font-family:monospace;letter-spacing:0.05em;user-select:none;"></div>
+<!-- 太さパネル削除済み (V0_47) -->
 </body>
 </html>
