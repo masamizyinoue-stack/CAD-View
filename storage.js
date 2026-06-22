@@ -28,7 +28,8 @@ function doSave(){
       strokes,dims,savedViews,tx,ty,scale,
       bwMode,scaleDenom:sd,hiddenLayers:[...hiddenLayers],
       currentTool,currentColor,currentLW,currentFileName,
-      currentHL_Color,currentHL_LW,currentDimColor
+      currentHL_Color,currentHL_LW,currentDimColor,
+      dimensionTextMode,inputMode
     }));
   }catch(e){}
 }
@@ -98,19 +99,18 @@ async function tryRestore(){
       b.classList.toggle('active',b.dataset.color===currentDimColor);
     });
     if(d.scaleDenom)document.getElementById('scaleDenom').value=d.scaleDenom;
-    if(bwMode){
-      document.getElementById('bwWhite').classList.add('active');
-      document.getElementById('bwBlack').classList.remove('active');
-    } else {
-      document.getElementById('bwBlack').classList.add('active');
-      document.getElementById('bwWhite').classList.remove('active');
-    }
+    if(typeof updateBwToggleBtn==='function') updateBwToggleBtn();
     document.querySelectorAll('.tool-btn').forEach(b=>{
       b.classList.toggle('active',b.dataset.tool===currentTool);
     });
     [0,1,2,3,4].forEach(i=>updateViewmemoState(i)); // V0_76: 5スロット対応
     buildLayerModal();  // hiddenLayers復元後に呼ぶ（チェックボックス状態を正しく反映）
     scheduleDraw();scheduleOverlay();updateUndoRedo();
+    // dimensionTextMode復元
+    if(d.dimensionTextMode)dimensionTextMode=d.dimensionTextMode;
+    if(typeof updateDimTextModeUI==='function')updateDimTextModeUI();
+    if(d.inputMode)inputMode=d.inputMode;
+    if(typeof updateInputModeUI==='function')updateInputModeUI();
     if(typeof updateToolColorDots==='function')updateToolColorDots();
   }catch(e){console.warn('restore:',e);}
 }

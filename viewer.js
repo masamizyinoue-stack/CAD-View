@@ -11,18 +11,25 @@ if(typeof pdfjsLib!=='undefined'){
 }
 var cv=document.getElementById('cv');
 var ov=document.getElementById('ov');
+var ac=document.getElementById('ac'); // V0_82: Annotation専用Canvas
 var stage=document.getElementById('stage');
 var ctx=cv.getContext('2d');
 var octx=ov.getContext('2d',{desynchronized:true});
+var actx=ac.getContext('2d'); // V0_82: Annotation Canvas context (CTM=identity)
 var doc=null;
 var currentFileName='';
 var tx=0,ty=0,scale=1;
-var bwMode=false;
+var fitScale=1;       // V0_83: 全体表示時のscaleを記録（drawAnnotation lineWidth基準用）
+var bwMode=true;  // false=黒背景
+var dimensionTextMode='auto'; // 'auto' | 'fixed'  寸法文字サイズモード
+var DIM_TEXT_MIN_PX=11;  // autoモード: 最小スクリーンpx
+var DIM_TEXT_MAX_PX=30;  // autoモード: 最大スクリーンpx
+var inputMode='pen'; // 'pen' | 'freehand'  入力モード
 // hiddenLayers → layer.js
 var pdfDoc=null,pdfPageNum=1;
 var pdfImage=null;
 var rafId=null;
-var needDraw=false,needOverlay=false;
+var needDraw=false,needOverlay=false,needAnnotation=false;
 // ─ パフォーマンス最適化 ─
 var _scEndPts=[],_scMidPts=[],_scCenPts=[]; // スナップキャッシュ（Xソート済）
 var perfMode=false; // 軽量モード（大容量DXF自動切替）
@@ -538,6 +545,7 @@ function fit(){
   const margin=0.05; // 5%余白
   const s=Math.min(W*(1-2*margin)/dw,H*(1-2*margin)/dh);
   scale=s;
+  fitScale=s; // V0_83: 全体表示時のscaleを保存
   tx=W/2-((bb.minx+bb.maxx)/2)*s;
   ty=H/2+((bb.miny+bb.maxy)/2)*s;
 }
@@ -545,11 +553,13 @@ function fit(){
 // =========================================================
 // 描画
 // =========================================================
-function scheduleDraw(){needDraw=true;needOverlay=true;if(!rafId)rafId=requestAnimationFrame(rafLoop);}
-function scheduleOverlay(){needOverlay=true;if(!rafId)rafId=requestAnimationFrame(rafLoop);}
+function scheduleDraw(){needDraw=true;needOverlay=true;needAnnotation=true;if(!rafId)rafId=requestAnimationFrame(rafLoop);}
+function scheduleOverlay(){needOverlay=true;needAnnotation=true;if(!rafId)rafId=requestAnimationFrame(rafLoop);}
+function scheduleAnnotation(){needAnnotation=true;if(!rafId)rafId=requestAnimationFrame(rafLoop);}
 function rafLoop(){
   rafId=null;
   if(needDraw){draw();needDraw=false;}
+  if(needAnnotation&&typeof drawAnnotation==='function'){drawAnnotation();needAnnotation=false;}
   if(needOverlay){drawOverlay();needOverlay=false;}
 }
 
@@ -734,9 +744,11 @@ function resizeCanvas(){
   const W=r.width, H=r.height;
   // CSSサイズは変えない（layout崩れを防ぐ）
   cv.style.width=W+'px'; cv.style.height=H+'px';
+  ac.style.width=W+'px'; ac.style.height=H+'px'; // V0_82: Annotation Canvas
   ov.style.width=W+'px'; ov.style.height=H+'px';
   // 内部解像度だけdpr倍にする
   cv.width=Math.round(W*dpr); cv.height=Math.round(H*dpr);
+  ac.width=Math.round(W*dpr); ac.height=Math.round(H*dpr); // V0_82
   ov.width=Math.round(W*dpr); ov.height=Math.round(H*dpr);
   scheduleDraw();
 }
