@@ -33,6 +33,8 @@ function handlePointerDown(sx,sy,isPenInput){
   if(window.DIM&&window.DIM.active)return;
   if(window.LP&&window.LP.active)return;
   const[wx,wy]=s2w(sx,sy);
+  // V0_102: dim text drag (水・鉛/斜めツール)
+  if((currentTool==='dxdy'||currentTool==='diag')&&typeof _dimTextHit==='function'){var _dth=_dimTextHit(sx,sy);if(_dth>=0){_dimTextDrag={idx:_dth,osx:sx,osy:sy,otx:dims[_dth].tx,oty:dims[_dth].ty,moved:false};return;}}
   // 寸法ツール: ペン入力のみ（指は touchstart でパン処理済み）
   if(currentTool==='dx'||currentTool==='dy'||currentTool==='dxdy'||currentTool==='diag'){
     if(isPenInput){
@@ -92,6 +94,7 @@ function handlePointerDown(sx,sy,isPenInput){
 // ポインタムーブ処理
 // =========================================================
 function handlePointerMove(sx,sy,isPenInput){
+  if(typeof _dimTextDrag!=='undefined'&&_dimTextDrag&&typeof _dimTextDragMove==='function'&&_dimTextDragMove(sx,sy)) return; // V0_102
   // DIMシステムがアクティブな場合は DIM の pointermove ハンドラに任せる
   if(window.DIM&&window.DIM.active)return;
   if(window.LP&&window.LP.active)return;
@@ -123,6 +126,7 @@ function handlePointerMove(sx,sy,isPenInput){
 // ポインタアップ処理
 // =========================================================
 function handlePointerUp(sx,sy,isPenInput){
+  if(typeof _dimTextDragUp==='function'&&_dimTextDragUp()) return; // V0_102
   // DIMシステムがアクティブな場合は DIM の pointerup ハンドラに任せる
   if(window.DIM&&window.DIM.active)return;
   if(window.LP&&window.LP.active)return;
@@ -152,6 +156,7 @@ function handlePointerUp(sx,sy,isPenInput){
         }
         dims.push(buildDim(p1,p2,p3||p2,dimType));
         dimState={pts:[]};
+        doSave(); // V0_103: 即時保存
         hideGuide();
         showGuide('寸法を追加しました ↩ で取消', 2000);
       }
@@ -168,7 +173,7 @@ function handlePointerUp(sx,sy,isPenInput){
       } else {
         strokes.push({pts:[...sketchPts],color:{...currentColor},lw:currentLW}); // ③ 絶対px値で保存
       }
-      sketching=false;sketchPts=[];scheduleOverlay();scheduleSave();
+      sketching=false;sketchPts=[];scheduleOverlay();doSave(); // V0_103: 即時保存
     }return;
   }
   panning=false;dragImageStart=null;selectedImage=null;
@@ -256,7 +261,7 @@ ov.addEventListener('touchstart',e=>{
     isPen=false;mouseDown=true;lastMX=sx;lastMY=sy;
     // V0_79: 手書きモード + スケッチ/蛍光ペン → 指で描画
     if(inputMode==='freehand'
-        &&(currentTool==='sketch'||currentTool==='hl')
+        &&(currentTool==='sketch'||currentTool==='hl'||currentTool==='eraser')
         &&!(window.DIM&&window.DIM.active)
         &&!(window.LP&&window.LP.active)){
       panning=false;
@@ -300,7 +305,7 @@ ov.addEventListener('touchmove',e=>{
     }
     tx=mid.x-wx*scale;ty=mid.y+wy*scale;
     pinchDist=dist;pinchMid=mid;scheduleDraw();
-  } else if(fingers.length===1&&mouseDown&&!panning&&sketching){
+  } else if(fingers.length===1&&mouseDown&&!panning&&(sketching||(inputMode==='freehand'&&currentTool==='eraser'))){
     // V0_79: 手書きモード 指1本描画中
     const t=fingers[0];
     const sx=t.clientX-r.left,sy=t.clientY-r.top;
@@ -351,7 +356,7 @@ ov.addEventListener('touchend',e=>{
   // 全タッチ終了
   if(remaining.length===0){
     // V0_79: 手書きモードで指描画中だった場合はストロークを確定
-    if(!isPen&&sketching){
+    if(!isPen&&(sketching||(inputMode==='freehand'&&currentTool==='eraser'))){
       handlePointerUp(lastMX,lastMY,false);
     }
     if(!isPen){panning=false;mouseDown=false;}
@@ -469,6 +474,6 @@ document.querySelectorAll('.dim-color-btn').forEach(btn=>{
     btn.classList.add('active');
     currentDimColor=btn.dataset.color;
     document.getElementById('colorOverlay').classList.remove('open');
-    if(typeof updateToolColorDots==='function')updateToolColorDots();
+        if(typeof updateToolColorDots==='function')updateToolColorDots();
   });
 });
