@@ -319,7 +319,7 @@ body.settings-open #settingsPanel{transform:translateX(0)}
 <div id="settingsPanel">
   <div class="sp-header">
     <span class="sp-title">設定</span>
-    <span style="font-size:11px;color:var(--text-dim);margin-right:auto;padding-left:8px">V0_109</span>
+    <span style="font-size:11px;color:var(--text-dim);margin-right:auto;padding-left:8px">V0_119</span>
     <button class="sp-close" id="settingsClose">✕</button>
   </div>
   <button id="openFileBtnMain">
@@ -371,6 +371,12 @@ body.settings-open #settingsPanel{transform:translateX(0)}
   <div class="sp-section">
     <button id="exportDxfBtn" class="sp-action-btn" title="書き込みをDXF書き出し">DXF書き込み書出し</button>
   </div>
+  <div class="sp-section">
+    <button id="exportDxfviewBtn" class="sp-action-btn">.dxfview保存</button>
+  </div>
+  <div class="sp-section">
+    <button id="hybridPDFBtn" class="sp-action-btn">HD-PDF書出（試験）</button>
+  </div>
   <div class="sp-section" style="display:flex;flex-direction:column;gap:8px">
     <button id="clearBtn" class="sp-danger-btn">書込み・寸法_全消去</button>
   </div>
@@ -378,7 +384,7 @@ body.settings-open #settingsPanel{transform:translateX(0)}
     <div class="sp-label">DXF情報</div>
     <div class="info-box" id="infoBox" style="font-size:12px;color:#888;background:#0a0c10;border:1px solid #2a3040;border-radius:8px;padding:8px;min-height:44px;line-height:1.6">ファイルを開いてください</div>
   </div>
-  <div id="ver-label">DXF_View V0_109</div>
+  <div id="ver-label">DXF_View V0_124</div>
 </div>
 
 <div id="colorOverlay">
@@ -484,7 +490,7 @@ body.settings-open #settingsPanel{transform:translateX(0)}
         フォルダを選択してインデックス作成
       </button>
       <div id="folderProgress"></div>
-      <div style="display:flex;gap:4px;align-items:center"><input type="search" id="allSearchInput" placeholder="キーワードを入力…" autocomplete="off" autocorrect="off" spellcheck="false" style="flex:1;min-width:0"><button id="asrInputClearBtn" style="background:none;border:none;color:var(--text-dim,#888);font-size:18px;cursor:pointer;padding:2px 6px;line-height:1;flex-shrink:0">✕</button></div>
+      <div style="display:flex;gap:4px;align-items:center"><input type="search" id="allSearchInput" placeholder="キーワードを入力…" autocomplete="off" autocorrect="off" spellcheck="false" style="flex:1;min-width:0"><button id="asrInputClearBtn" style="background:none;border:none;color:var(--text-dim,#888);font-size:18px;cursor:pointer;padding:2px 6px;line-height:1;flex-shrink:0">✕</button><!-- V0_110: 音声入力 --><button id="voiceSearchBtn" style="background:none;border:none;color:var(--text-dim,#888);font-size:20px;cursor:pointer;padding:2px 6px;line-height:1;flex-shrink:0" title="音声入力">🎤</button><!-- /V0_110: 音声入力 --></div>
       <div id="allSearchCount" style="font-size:13px;color:var(--text-dim);min-height:18px"></div>
       <button id="allSearchClearBtn">インデックスをクリア</button>
     </div>
@@ -504,7 +510,7 @@ body.settings-open #settingsPanel{transform:translateX(0)}
 <script src="export.js"></script>
 <script src="tool.js"></script>
 <script>
-const APP_VERSION = 'V0_109';
+const APP_VERSION = 'V0_124';
 
 // =========================================================
 // グローバル状態
@@ -566,9 +572,15 @@ function drawAnnotation(targetCtx) {
   function physY(wy){ return (-wy * scale + ty) * dpr; }
 
   // 保存済みストローク（Catmull-Rom風 midpoint quadratic bezier）
+  // V0_119: ビューポートカリング（物理ピクセル空間で判定）
+  const _mgPx=(atc.canvas.width>0?60*(window.devicePixelRatio||1):0);
+  const _cwPx=atc.canvas.width, _chPx=atc.canvas.height;
   for(var si=0; si<strokes.length; si++){
     var s = strokes[si];
     if(!s.pts || s.pts.length < 2) continue;
+    var _sxMn=Infinity,_sxMx=-Infinity,_syMn=Infinity,_syMx=-Infinity;
+    for(var _pi=0;_pi<s.pts.length;_pi++){var _ppx=physX(s.pts[_pi].x),_ppy=physY(s.pts[_pi].y);if(_ppx<_sxMn)_sxMn=_ppx;if(_ppx>_sxMx)_sxMx=_ppx;if(_ppy<_syMn)_syMn=_ppy;if(_ppy>_syMx)_syMx=_ppy;}
+    if(_sxMx<-_mgPx||_sxMn>_cwPx+_mgPx||_syMx<-_mgPx||_syMn>_chPx+_mgPx) continue;
     atc.save();
     if(s.hl){
       atc.globalAlpha = 0.45;
@@ -663,8 +675,18 @@ function drawOverlay(){
       });
     }
   }
-  // Dims
-  for(const d of dims) drawDimEntity(octx,d);
+  // Dims（V0_119: ビューポートカリング追加）
+  {const _mgD=60;for(const d of dims){
+    if(!d.lines||d.lines.length===0){drawDimEntity(octx,d);continue;}
+    let _wxMn=Infinity,_wyMn=Infinity,_wxMx=-Infinity,_wyMx=-Infinity;
+    for(const _l of d.lines){if(_l.x1<_wxMn)_wxMn=_l.x1;if(_l.x1>_wxMx)_wxMx=_l.x1;if(_l.y1<_wyMn)_wyMn=_l.y1;if(_l.y1>_wyMx)_wyMx=_l.y1;if(_l.x2<_wxMn)_wxMn=_l.x2;if(_l.x2>_wxMx)_wxMx=_l.x2;if(_l.y2<_wyMn)_wyMn=_l.y2;if(_l.y2>_wyMx)_wyMx=_l.y2;}
+    if(d.tx!=null){if(d.tx<_wxMn)_wxMn=d.tx;if(d.tx>_wxMx)_wxMx=d.tx;}
+    if(d.ty!=null){if(d.ty<_wyMn)_wyMn=d.ty;if(d.ty>_wyMx)_wyMx=d.ty;}
+    const _sxMn=_wxMn*scale+tx,_sxMx=_wxMx*scale+tx;
+    const _syMn=-_wyMx*scale+ty,_syMx=-_wyMn*scale+ty;
+    if(_sxMx<-_mgD||_sxMn>W+_mgD||_syMx<-_mgD||_syMn>H+_mgD) continue;
+    drawDimEntity(octx,d);
+  }}
   // V0_82: Strokes/Sketch → drawAnnotation() (#ac専用Canvas) に移動
   // Dim guide
   if((currentTool==='dx'||currentTool==='dy'||currentTool==='dxdy'||currentTool==='diag')&&dimState.pts.length>0){
@@ -857,6 +879,9 @@ function drawOverlay(){
 // マウス/wheel/タッチ イベントリスナー → tool.js
 
 
+// V0_119: ファイル一意キー（name+size）。同名異サイズを別ファイルとして扱う
+function _fileKey(name,size){return name+'\x00'+size;}
+
 // ファイル
 const fileInput=document.getElementById('file');
 document.getElementById('openFileBtnMain').addEventListener('click',()=>fileInput.click());
@@ -869,7 +894,7 @@ fileInput.addEventListener('change',async e=>{
   document.getElementById('pdfPageCtrl').style.display='none';
   if(f.name.toLowerCase().endsWith('.pdf')){
     await loadPDF(buf);{const nd2=document.getElementById('noDrawingMsg');if(nd2)nd2.style.display='none';}
-    saveFile(buf,f.name);scheduleSave();updateFileNameDisplay();
+    saveFile(buf,_fileKey(f.name,f.size));scheduleSave();updateFileNameDisplay();
     document.body.classList.remove('settings-open');
   } else {
     try{
@@ -877,18 +902,20 @@ fileInput.addEventListener('change',async e=>{
       currentFileSize=f.size; // V0_103
       hiddenLayers.clear();strokes=[];dims=[];images=[];savedViews=[null,null,null,null,null];[0,1,2,3,4].forEach(i=>updateViewmemoState(i)); // V0_76: 5スロット
       buildSnapCache();checkPerfMode();buildLayerModal();detectScale();fit();scheduleDraw();showInfo();buildSearchIndex();_idbSave(f.name,buf,_searchIdx.map(function(m){return m.text;}));{const _nd=document.getElementById('noDrawingMsg');if(_nd)_nd.style.display='none';}{const _nd=document.getElementById('noDrawingMsg');if(_nd)_nd.style.display='none';}
-      saveFile(buf,f.name);doSave();updateFileNameDisplay();
+      saveFile(buf,_fileKey(f.name,f.size));scheduleSave();updateFileNameDisplay();// V0_113: openFiles[]登録後に保存されるようdoSave→scheduleSave
       document.body.classList.remove('settings-open');
     }catch(err){alert('ファイルを開けません: '+err.message);}
   }
   // V0_93: openFilesに登録
-  if(currentFileIdx<0){openFiles.push({name:f.name});currentFileIdx=0;}else{var _xi=openFiles.findIndex(function(x){return x.name===f.name;});if(_xi>=0){currentFileIdx=_xi;}else{openFiles.push({name:f.name});currentFileIdx=openFiles.length-1;}}saveCurrentFileState();updateFileNavUI();
+  // V0_119: fileKeyベースで同名異サイズを別タブとして管理
+  if(currentFileIdx<0){openFiles.push({name:f.name,fileKey:_fileKey(f.name,f.size)});currentFileIdx=0;}else{var _xi=openFiles.findIndex(function(x){return x.fileKey===_fileKey(f.name,f.size);});if(_xi>=0){currentFileIdx=_xi;}else{openFiles.push({name:f.name,fileKey:_fileKey(f.name,f.size)});currentFileIdx=openFiles.length-1;}}openFilesBufs[currentFileIdx]=buf;saveCurrentFileState();updateFileNavUI();// V0_112
   e.target.value='';
 });
 
 // V0_93: マルチファイル管理 ─────────────────────────────────────
-var openFiles=[];   // [{name,doc,pdfDoc,pdfImage,pdfPageNum,strokes,dims,images,savedViews,hiddenLayersArr,currentFileName}]
+var openFiles=[];   // [{name,doc,pdfDoc,pdfImage,pdfPageNum,strokes,dims,images,savedViews,hiddenLayersArr,currentFileName,tx,ty,scale,fitScale,fileSize}]
 var currentFileIdx=-1;
+var openFilesBufs=[];  // V0_112: ファイルバイナリキャッシュ（マルチ復元用）
 
 function saveCurrentFileState(){
   if(currentFileIdx<0||currentFileIdx>=openFiles.length) return;
@@ -900,7 +927,8 @@ function saveCurrentFileState(){
     images: (typeof images!=='undefined'?images.slice():[]),
     savedViews: savedViews.slice(),
     hiddenLayersArr: Array.from(hiddenLayers),
-    currentFileName: currentFileName
+    currentFileName: currentFileName,
+    tx:tx, ty:ty, scale:scale, fitScale:fitScale, fileSize:currentFileSize  // V0_112
   });
 }
 
@@ -980,7 +1008,31 @@ function closeTab(idx){
     var pdfBtn=document.getElementById('savePDFBtn');
     if(pdfBtn) pdfBtn.click();
   });
-  makeBtn('そのまま閉じる','#c0392b','#fff',function(){doCloseTab(idx);});
+  makeBtn('そのまま閉じる','#c0392b','#fff',function(){ // V0_111: 二段確認
+    var dlg2=document.createElement('div');
+    dlg2.style.cssText='position:fixed;inset:0;z-index:9100;display:flex;align-items:center;justify-content:center;background:rgba(0,0,0,.72)';
+    var box2=document.createElement('div');
+    box2.style.cssText='background:#131921;border:1px solid #c0392b;border-radius:14px;padding:22px 18px;min-width:260px;max-width:90vw;display:flex;flex-direction:column;gap:10px';
+    var msg2=document.createElement('div');
+    msg2.style.cssText='font-size:13px;color:#fff;font-weight:600;text-align:center;margin-bottom:2px';
+    msg2.textContent='本当に閉じても宜しいですか？';
+    var sub2=document.createElement('div');
+    sub2.style.cssText='font-size:12px;color:#e74c3c;text-align:center';
+    sub2.textContent='未保存のPDFは作成されません。';
+    box2.appendChild(msg2);box2.appendChild(sub2);
+    function makeBtn2(label,bg,fg,cb){
+      var b=document.createElement('button');
+      b.textContent=label;
+      b.style.cssText='width:100%;padding:12px;border-radius:10px;font-size:14px;font-weight:600;cursor:pointer;background:'+bg+';color:'+fg+';border:1px solid '+(bg==='transparent'?'#3a4050':'transparent');
+      b.addEventListener('click',function(){document.body.removeChild(dlg2);cb();});
+      box2.appendChild(b);
+    }
+    makeBtn2('閉じる','#c0392b','#fff',function(){doCloseTab(idx);});
+    makeBtn2('戻る','transparent','#6b7f99',function(){});
+    dlg2.appendChild(box2);
+    dlg2.addEventListener('click',function(e){if(e.target===dlg2){document.body.removeChild(dlg2);}});
+    document.body.appendChild(dlg2);
+  });
   makeBtn('キャンセル','transparent','#6b7f99',function(){});
   dlg.appendChild(box);
   dlg.addEventListener('click',function(e){if(e.target===dlg){document.body.removeChild(dlg);}});
@@ -995,7 +1047,7 @@ function doCloseTab(idx){
     strokes=[];dims=[];
     if(typeof images!=='undefined') images=[];
     savedViews=[];
-    hiddenLayers=new Set();hiddenLayersArr=[];
+    hiddenLayers=new Set();
     currentFileName='';currentFileSize=0;
     var fd=document.getElementById('fileNameDisplay');if(fd) fd.textContent='---';
     var nd=document.getElementById('noDrawingMsg');if(nd) nd.style.display='';
@@ -1484,6 +1536,7 @@ function formatDim(d){
   window.snapAt=function(wx,wy){
     var base=_origSnapAt(wx,wy);
     if(!doc) return base;
+    if(perfMode) return base; // V0_120: 大容量DXF時は拡張スナップをスキップ
     var extras=[];
     var sr=24/scale;
     var sen=doc.sen||[], enko=doc.enko||[];
@@ -2618,4 +2671,54 @@ function _dimTextDragUp(){
   return true;
 }
 
+
+// =========================================================
+// V0_110: 音声入力 ここから（削除時はこのブロックごと削除）
+// =========================================================
+(function(){
+  var btn = document.getElementById('voiceSearchBtn');
+  if(!btn) return;
+  var SpeechRec = window.SpeechRecognition || window.webkitSpeechRecognition;
+  if(!SpeechRec){
+    btn.style.display='none'; // 非対応ブラウザでは非表示
+    return;
+  }
+  var rec = new SpeechRec();
+  rec.lang = 'ja-JP';
+  rec.continuous = false;
+  rec.interimResults = false;
+  var listening = false;
+
+  btn.addEventListener('click', function(){
+    if(listening){ rec.stop(); return; }
+    try{
+      rec.start();
+    }catch(e){}
+  });
+
+  rec.onstart = function(){
+    listening = true;
+    btn.textContent = '🔴';
+    btn.title = '録音中（タップで停止）';
+  };
+  rec.onend = function(){
+    listening = false;
+    btn.textContent = '🎤';
+    btn.title = '音声入力';
+  };
+  rec.onresult = function(e){
+    var text = e.results[0][0].transcript;
+    var inp = document.getElementById('allSearchInput');
+    if(inp){ inp.value = text; inp.dispatchEvent(new Event('input')); }
+  };
+  rec.onerror = function(e){
+    listening = false;
+    btn.textContent = '🎤';
+    showGuide('音声認識エラー: ' + e.error, 2000);
+  };
+})();
+// =========================================================
+// V0_110: 音声入力 
 </script>
+</body>
+</html>
